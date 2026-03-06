@@ -2,14 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Next.js middleware — runs on every request matched by `config.matcher`.
+ * Next.js 16 proxy (previously called middleware).
+ * Runs on every request matched by `config.matcher`.
  *
  * Responsibilities:
  *  1. Refresh the Supabase session cookie so it stays valid.
  *  2. Redirect unauthenticated users to /login.
  *  3. Reject authenticated users whose email is not on the whitelist.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
