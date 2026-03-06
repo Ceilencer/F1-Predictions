@@ -53,6 +53,9 @@ export default function PredictForm({ raceWeekend, existing, isLocked }: Predict
   const [error, setError]   = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Unlocked once the user has submitted (either previously or just now) or deadline has passed
+  const canViewOthers = isLocked || !!existing || success;
+
   function set(field: keyof FormState) {
     return (value: string) => {
       setForm((prev) => ({ ...prev, [field]: value }));
@@ -228,6 +231,25 @@ export default function PredictForm({ raceWeekend, existing, isLocked }: Predict
           "
         />
       </FieldCard>
+
+      {/* See others' predictions */}
+      {canViewOthers && (
+        <a
+          href={`/predict/${raceWeekend.id}/others`}
+          className="
+            flex items-center justify-center gap-2
+            w-full min-h-[44px] px-6 py-3 rounded-xl
+            bg-white/5 hover:bg-white/10 border border-white/10
+            text-white font-semibold text-sm transition-colors
+          "
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          See what everyone else picked
+        </a>
+      )}
 
       {/* Submit */}
       {!isLocked && (

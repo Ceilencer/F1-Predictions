@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import Countdown from "@/components/Countdown";
+import PredictionCard from "@/components/PredictionCard";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,24 +57,44 @@ export default async function DashboardPage() {
         .limit(1)
         .maybeSingle();
 
-  // Has the user already submitted for this race?
-  let hasSubmitted = false;
-  if (currentRace) {
-    const { data: pred } = await supabase
-      .from("predictions")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("race_weekend_id", currentRace.id)
-      .maybeSingle();
-    hasSubmitted = !!pred;
-  }
+  const isLocked = currentRace
+    ? new Date() > new Date(currentRace.qualifying_deadline)
+    : true;
 
-  // Leaderboard: aggregate total_points per user
-  const [{ data: profiles }, { data: allScores }] = await Promise.all([
+  // Fetch own prediction, all race predictions, profiles, and scores in parallel
+  const [
+    { data: ownPred },
+    { data: racePredictions },
+    { data: profiles },
+    { data: allScores },
+  ] = await Promise.all([
+    currentRace
+      ? supabase.from("predictions").select("*").eq("user_id", user.id).eq("race_weekend_id", currentRace.id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    currentRace
+      ? supabase.from("predictions").select("*").eq("race_weekend_id", currentRace.id).order("submitted_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
     supabase.from("profiles").select("*"),
     supabase.from("scores").select("*"),
   ]);
 
+  const hasSubmitted = !!ownPred;
+  const canViewPredictions = hasSubmitted || isLocked;
+
+  // Build profile map from already-fetched profiles
+  const profileMap: Record<string, string> = {};
+  for (const p of profiles ?? []) {
+    profileMap[p.id] = p.display_name;
+  }
+
+  // Sort own card first, then others by submitted_at
+  const allPredictions = racePredictions ?? [];
+  const sortedPredictions = [
+    ...allPredictions.filter((p) => p.user_id === user.id),
+    ...allPredictions.filter((p) => p.user_id !== user.id),
+  ];
+
+  // Leaderboard
   type LeaderboardEntry = { id: string; display_name: string; totalPoints: number; rank: number };
   const leaderboard: LeaderboardEntry[] = (profiles ?? [])
     .map((p) => ({
@@ -87,10 +108,6 @@ export default async function DashboardPage() {
 
   const myEntry = leaderboard.find((e) => e.id === user.id);
   const top3 = leaderboard.slice(0, 3);
-
-  const isLocked = currentRace
-    ? new Date() > new Date(currentRace.qualifying_deadline)
-    : true;
 
   return (
     <div className="space-y-6">
@@ -153,6 +170,7 @@ export default async function DashboardPage() {
                   {hasSubmitted ? "Edit predictions" : "Submit predictions"}
                 </Link>
               )}
+
             </div>
           </div>
 
@@ -169,6 +187,65 @@ export default async function DashboardPage() {
         <Card>
           <p className="text-muted text-sm">No race weekends scheduled yet. Check back soon.</p>
         </Card>
+      )}
+
+      {/* ── Race predictions ── */}
+      {currentRace && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <SectionLabel>Race Predictions</SectionLabel>
+            {canViewPredictions && sortedPredictions.length > 0 && (
+              <Link href={`/predict/${currentRace.id}/others`} className="text-xs text-accent hover:underline">
+                Full view →
+              </Link>
+            )}
+          </div>
+
+          {!canViewPredictions ? (
+            <Card>
+              <div className="flex flex-col items-center text-center py-4 gap-3">
+                <div className="h-10 w-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Submit your picks to see everyone else&apos;s</p>
+                  <p className="text-xs text-muted mt-1">Predictions are hidden until you&apos;ve submitted — no spoilers!</p>
+                </div>
+                <Link
+                  href="/predict"
+                  className="mt-1 px-5 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Make my predictions
+                </Link>
+              </div>
+            </Card>
+          ) : sortedPredictions.length === 0 ? (
+            <Card>
+              <p className="text-sm text-muted text-center py-2">No predictions submitted yet for this race.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {sortedPredictions.map((prediction) => (
+                <PredictionCard
+                  key={prediction.id}
+                  displayName={profileMap[prediction.user_id] ?? "Unknown"}
+                  pWhatPosition={currentRace.p_what_position}
+                  isOwn={prediction.user_id === user.id}
+                  pole_position={prediction.pole_position}
+                  top3_p1={prediction.top3_p1}
+                  top3_p2={prediction.top3_p2}
+                  top3_p3={prediction.top3_p3}
+                  biggest_surprise={prediction.biggest_surprise}
+                  biggest_flop={prediction.biggest_flop}
+                  p_what_driver={prediction.p_what_driver}
+                  crazy_prediction={prediction.crazy_prediction}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── Mini leaderboard ── */}
