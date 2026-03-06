@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import DriverSelect from "@/components/DriverSelect";
-import { TEAMS } from "@/config/drivers";
+import DriverPickerModal from "@/components/DriverPickerModal";
 import { submitPredictions } from "./actions";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -26,65 +25,6 @@ interface FormState {
   p_what_driver: string;
 }
 
-interface Category {
-  key: keyof Omit<FormState, "crazy_prediction">;
-  label: string;
-  description: string;
-}
-
-const DRIVER_CATEGORIES: Category[] = [
-  { key: "pole_position", label: "Pole Position", description: "Which driver will qualify P1?" },
-  { key: "top3_p1", label: "Race Winner — P1", description: "Who crosses the line first?" },
-  { key: "top3_p2", label: "P2 Finisher", description: "Who finishes second?" },
-  { key: "top3_p3", label: "P3 Finisher", description: "Who takes the final podium spot?" },
-];
-
-function DriverOrTeamSelect({
-  name,
-  value,
-  onChange,
-  disabled,
-}: {
-  name: string;
-  value: string;
-  onChange: (v: string) => void;
-  disabled: boolean;
-}) {
-  return (
-    <select
-      name={name}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      onWheel={(e) => e.currentTarget.blur()}
-      disabled={disabled}
-      className="
-        w-full min-h-[44px] px-3 py-2 rounded-lg text-sm
-        bg-background border border-white/10 text-white
-        focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent
-        disabled:opacity-50 disabled:cursor-not-allowed
-      "
-    >
-      <option value="">Select a driver or team…</option>
-      <optgroup label="── Teams ──">
-        {TEAMS.map((team) => (
-          <option key={team.shortName} value={team.shortName}>
-            {team.name}
-          </option>
-        ))}
-      </optgroup>
-      <optgroup label="── Drivers ──">
-        {TEAMS.map((team) =>
-          team.drivers.map((driver) => (
-            <option key={driver.code} value={driver.code}>
-              {driver.name} ({team.shortName})
-            </option>
-          ))
-        )}
-      </optgroup>
-    </select>
-  );
-}
-
 function FieldCard({ label, description, children }: { label: string; description: string; children: React.ReactNode }) {
   return (
     <div className="bg-surface rounded-xl border border-white/5 p-4 space-y-2">
@@ -99,18 +39,18 @@ function FieldCard({ label, description, children }: { label: string; descriptio
 
 export default function PredictForm({ raceWeekend, existing, isLocked }: PredictFormProps) {
   const [form, setForm] = useState<FormState>({
-    pole_position: existing?.pole_position ?? "",
-    top3_p1: existing?.top3_p1 ?? "",
-    top3_p2: existing?.top3_p2 ?? "",
-    top3_p3: existing?.top3_p3 ?? "",
+    pole_position:    existing?.pole_position    ?? "",
+    top3_p1:          existing?.top3_p1          ?? "",
+    top3_p2:          existing?.top3_p2          ?? "",
+    top3_p3:          existing?.top3_p3          ?? "",
     biggest_surprise: existing?.biggest_surprise ?? "",
-    biggest_flop: existing?.biggest_flop ?? "",
+    biggest_flop:     existing?.biggest_flop     ?? "",
     crazy_prediction: existing?.crazy_prediction ?? "",
-    p_what_driver: existing?.p_what_driver ?? "",
+    p_what_driver:    existing?.p_what_driver    ?? "",
   });
 
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]   = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   function set(field: keyof FormState) {
@@ -124,7 +64,6 @@ export default function PredictForm({ raceWeekend, existing, isLocked }: Predict
     e.preventDefault();
     setError(null);
 
-    // Basic validation
     const required: (keyof FormState)[] = [
       "pole_position", "top3_p1", "top3_p2", "top3_p3",
       "biggest_surprise", "biggest_flop", "crazy_prediction", "p_what_driver",
@@ -149,6 +88,8 @@ export default function PredictForm({ raceWeekend, existing, isLocked }: Predict
       }
     });
   }
+
+  const locked = isLocked || isPending;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -186,28 +127,52 @@ export default function PredictForm({ raceWeekend, existing, isLocked }: Predict
         </div>
       )}
 
-      {/* Top 4 driver categories (pole + podium) */}
-      {DRIVER_CATEGORIES.slice(0, 4).map(({ key, label, description }) => (
-        <FieldCard key={key} label={label} description={description}>
-          <DriverSelect
-            name={key}
-            value={form[key]}
-            onChange={set(key)}
-            disabled={isLocked || isPending}
-          />
-        </FieldCard>
-      ))}
+      {/* Pole Position */}
+      <FieldCard label="Pole Position" description="Which driver will qualify P1?">
+        <DriverPickerModal
+          value={form.pole_position}
+          onChange={set("pole_position")}
+          disabled={locked}
+        />
+      </FieldCard>
+
+      {/* Race Winner */}
+      <FieldCard label="Race Winner — P1" description="Who crosses the line first?">
+        <DriverPickerModal
+          value={form.top3_p1}
+          onChange={set("top3_p1")}
+          disabled={locked}
+        />
+      </FieldCard>
+
+      {/* P2 */}
+      <FieldCard label="P2 Finisher" description="Who finishes second?">
+        <DriverPickerModal
+          value={form.top3_p2}
+          onChange={set("top3_p2")}
+          disabled={locked}
+        />
+      </FieldCard>
+
+      {/* P3 */}
+      <FieldCard label="P3 Finisher" description="Who takes the final podium spot?">
+        <DriverPickerModal
+          value={form.top3_p3}
+          onChange={set("top3_p3")}
+          disabled={locked}
+        />
+      </FieldCard>
 
       {/* Biggest Good Surprise — driver or team */}
       <FieldCard
         label="Biggest Good Surprise"
         description="Pick a driver or a team who will overperform expectations."
       >
-        <DriverOrTeamSelect
-          name="biggest_surprise"
+        <DriverPickerModal
           value={form.biggest_surprise}
           onChange={set("biggest_surprise")}
-          disabled={isLocked || isPending}
+          disabled={locked}
+          allowTeams
         />
       </FieldCard>
 
@@ -216,11 +181,11 @@ export default function PredictForm({ raceWeekend, existing, isLocked }: Predict
         label="Biggest Flop"
         description="Pick a driver or a team who will underperform expectations."
       >
-        <DriverOrTeamSelect
-          name="biggest_flop"
+        <DriverPickerModal
           value={form.biggest_flop}
           onChange={set("biggest_flop")}
-          disabled={isLocked || isPending}
+          disabled={locked}
+          allowTeams
         />
       </FieldCard>
 
@@ -235,11 +200,10 @@ export default function PredictForm({ raceWeekend, existing, isLocked }: Predict
           </span>
           <span className="text-xs text-muted">is this race's generated position</span>
         </div>
-        <DriverSelect
-          name="p_what_driver"
+        <DriverPickerModal
           value={form.p_what_driver}
           onChange={set("p_what_driver")}
-          disabled={isLocked || isPending}
+          disabled={locked}
         />
       </FieldCard>
 
@@ -252,7 +216,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked }: Predict
           name="crazy_prediction"
           value={form.crazy_prediction}
           onChange={(e) => set("crazy_prediction")(e.target.value)}
-          disabled={isLocked || isPending}
+          disabled={locked}
           placeholder="e.g. Safety car on lap 1, Hamilton retires from the lead…"
           rows={3}
           className="
