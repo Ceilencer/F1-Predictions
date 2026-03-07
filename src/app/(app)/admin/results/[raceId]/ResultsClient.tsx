@@ -335,7 +335,7 @@ export default function ResultsClient({
               <span className="text-white font-mono">{pWhatActual || "pending"}</span>
               <br />
               <span className="text-muted">
-                Toggle Surprise / Flop / Wildcard to award manual points (cycles: — → ✓ → ✗ → —).
+                Use Yes / No / ? on Surprise, Flop, and Wildcard to award manual points.
               </span>
             </p>
           )}

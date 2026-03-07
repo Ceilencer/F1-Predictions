@@ -125,11 +125,23 @@ export async function syncRaceResults(raceWeekendId: string): Promise<{
   const qualData: JolpicaResponse = await qualRes.json();
   const rawQual = qualData.MRData.RaceTable.Races[0]?.QualifyingResults ?? [];
 
+  // If Jolpica returns empty qualifying, fall back to whatever is already stored.
+  // This happens when re-syncing after a partial sync while the API is still catching up.
+  let qualifying: ResultEntry[];
   if (rawQual.length === 0) {
-    return { error: "No qualifying results found yet. Try again after qualifying finishes." };
+    const { data: existingResults } = await supabase
+      .from("race_results")
+      .select("qualifying")
+      .eq("race_weekend_id", raceWeekendId)
+      .maybeSingle();
+    const storedQual = existingResults?.qualifying;
+    if (!storedQual || !Array.isArray(storedQual) || storedQual.length === 0) {
+      return { error: "No qualifying results found yet. Try again after qualifying finishes." };
+    }
+    qualifying = storedQual as ResultEntry[];
+  } else {
+    qualifying = toEntries(rawQual);
   }
-
-  const qualifying = toEntries(rawQual);
 
   // Race results — may be empty if the race hasn't happened yet
   let race: ResultEntry[] = [];
