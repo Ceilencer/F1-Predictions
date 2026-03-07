@@ -12,6 +12,8 @@ interface PredictFormProps {
   raceWeekend: RaceWeekend;
   existing: Prediction | null;
   isLocked: boolean;
+  /** ISO string — if set and in the future, predictions aren't open yet */
+  predictionsOpenAt: string | null;
 }
 
 interface FormState {
@@ -37,7 +39,8 @@ function FieldCard({ label, description, children }: { label: string; descriptio
   );
 }
 
-export default function PredictForm({ raceWeekend, existing, isLocked }: PredictFormProps) {
+export default function PredictForm({ raceWeekend, existing, isLocked, predictionsOpenAt }: PredictFormProps) {
+  const notOpenYet = !!predictionsOpenAt && new Date() < new Date(predictionsOpenAt);
   const [form, setForm] = useState<FormState>({
     pole_position:    existing?.pole_position    ?? "",
     top3_p1:          existing?.top3_p1          ?? "",
@@ -93,6 +96,30 @@ export default function PredictForm({ raceWeekend, existing, isLocked }: Predict
   }
 
   const locked = isLocked || isPending;
+
+  if (notOpenYet) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-surface rounded-xl border border-white/5 p-4">
+          <p className="text-xs text-muted uppercase tracking-widest font-semibold mb-1">
+            Round {raceWeekend.round} · {raceWeekend.season}
+          </p>
+          <h2 className="text-lg font-bold text-white">{raceWeekend.race_name}</h2>
+        </div>
+        <div className="bg-surface rounded-xl border border-white/5 p-6 text-center space-y-2">
+          <p className="text-white font-semibold">Predictions not open yet</p>
+          <p className="text-sm text-muted">
+            Opens{" "}
+            {new Date(predictionsOpenAt!).toLocaleString("en-GB", {
+              weekday: "short", day: "numeric", month: "short",
+              hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+            })}
+          </p>
+          <p className="text-xs text-muted">12 hours after the previous race finishes.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

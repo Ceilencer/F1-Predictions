@@ -10,7 +10,8 @@ export default async function PredictPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const now = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
 
   // Upcoming/active race: earliest race whose start time hasn't passed yet.
   // Uses race_start so the race shows as active through qualifying (locked) and
@@ -18,7 +19,7 @@ export default async function PredictPage() {
   const { data: upcoming } = await supabase
     .from("race_weekends")
     .select("*")
-    .gt("race_start", now)
+    .gt("race_start", nowIso)
     .order("race_start", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -28,10 +29,28 @@ export default async function PredictPage() {
     : await supabase
         .from("race_weekends")
         .select("*")
-        .lte("race_start", now)
+        .lte("race_start", nowIso)
         .order("race_start", { ascending: false })
         .limit(1)
         .maybeSingle();
+
+  // Previous race — used to compute when predictions open (12h after it ends).
+  // Only relevant when there's an upcoming race (not the current/most-recent one).
+  const { data: previousRace } = upcoming
+    ? await supabase
+        .from("race_weekends")
+        .select("race_start")
+        .lt("race_start", upcoming.race_start)
+        .order("race_start", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
+  // Predictions open 12 hours after the previous race starts (approx. when it ends).
+  // If there's no previous race (season opener), predictions open immediately.
+  const predictionsOpenAt = previousRace
+    ? new Date(new Date(previousRace.race_start).getTime() + 12 * 60 * 60 * 1000).toISOString()
+    : null;
 
   // Existing prediction for this race
   const { data: existing } = raceWeekend
@@ -44,7 +63,7 @@ export default async function PredictPage() {
     : { data: null };
 
   const isLocked = raceWeekend
-    ? new Date() > new Date(raceWeekend.qualifying_deadline)
+    ? now > new Date(raceWeekend.qualifying_deadline)
     : true;
 
   return (
@@ -61,6 +80,7 @@ export default async function PredictPage() {
           raceWeekend={raceWeekend}
           existing={existing}
           isLocked={isLocked}
+          predictionsOpenAt={predictionsOpenAt}
         />
       )}
     </div>
