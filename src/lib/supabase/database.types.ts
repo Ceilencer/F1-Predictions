@@ -74,6 +74,12 @@ export interface Database {
           p_what_position: number;
           results_synced: boolean;
           created_at: string;
+          is_sprint_weekend: boolean;
+          fp1_start: string | null;
+          fp2_start: string | null;
+          fp3_start: string | null;
+          sprint_qualifying_start: string | null;
+          sprint_race_start: string | null;
         };
         Insert: {
           id?: string;
@@ -85,6 +91,12 @@ export interface Database {
           p_what_position: number;
           results_synced?: boolean;
           created_at?: string;
+          is_sprint_weekend?: boolean;
+          fp1_start?: string | null;
+          fp2_start?: string | null;
+          fp3_start?: string | null;
+          sprint_qualifying_start?: string | null;
+          sprint_race_start?: string | null;
         };
         Update: {
           id?: string;
@@ -96,6 +108,12 @@ export interface Database {
           p_what_position?: number;
           results_synced?: boolean;
           created_at?: string;
+          is_sprint_weekend?: boolean;
+          fp1_start?: string | null;
+          fp2_start?: string | null;
+          fp3_start?: string | null;
+          sprint_qualifying_start?: string | null;
+          sprint_race_start?: string | null;
         };
         Relationships: [];
       };
@@ -141,6 +159,39 @@ export interface Database {
           crazy_prediction?: string;
           p_what_driver?: string;
           submitted_at?: string;
+        };
+        Relationships: [];
+      };
+      race_results: {
+        Row: {
+          id: string;
+          race_weekend_id: string;
+          qualifying: Json | null;
+          race: Json | null;
+          sprint_qualifying: Json | null;
+          sprint_race: Json | null;
+          last_synced_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          race_weekend_id: string;
+          qualifying?: Json | null;
+          race?: Json | null;
+          sprint_qualifying?: Json | null;
+          sprint_race?: Json | null;
+          last_synced_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          race_weekend_id?: string;
+          qualifying?: Json | null;
+          race?: Json | null;
+          sprint_qualifying?: Json | null;
+          sprint_race?: Json | null;
+          last_synced_at?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };

@@ -131,6 +131,12 @@ export async function seedFromCalendar(): Promise<{
       race_start: r.race_start,
       p_what_position: ex?.p_what_position ?? Math.floor(Math.random() * 19) + 4,
       results_synced: ex?.results_synced ?? false,
+      is_sprint_weekend: r.is_sprint_weekend ?? false,
+      fp1_start: r.fp1_start ?? null,
+      fp2_start: r.fp2_start ?? null,
+      fp3_start: r.fp3_start ?? null,
+      sprint_qualifying_start: r.sprint_qualifying_start ?? null,
+      sprint_race_start: r.sprint_race_start ?? null,
     };
   });
 

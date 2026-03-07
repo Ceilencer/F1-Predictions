@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import {
   addWhitelistedEmail,
   removeWhitelistedEmail,
@@ -301,20 +302,28 @@ function RaceSection({ initial }: { initial: RaceWeekend[] }) {
                   })}
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  setEditId(r.id);
-                  // Convert ISO to datetime-local format
-                  const local = new Date(r.qualifying_deadline);
-                  const pad = (n: number) => String(n).padStart(2, "0");
-                  setEditDeadline(
-                    `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(local.getHours())}:${pad(local.getMinutes())}`
-                  );
-                }}
-                className="text-xs text-accent hover:underline shrink-0"
-              >
-                Edit deadline
-              </button>
+              <div className="flex items-center gap-3 shrink-0">
+                <Link
+                  href={`/admin/results/${r.id}`}
+                  className="text-xs text-accent hover:underline"
+                >
+                  Results
+                </Link>
+                <button
+                  onClick={() => {
+                    setEditId(r.id);
+                    // Convert ISO to datetime-local format
+                    const local = new Date(r.qualifying_deadline);
+                    const pad = (n: number) => String(n).padStart(2, "0");
+                    setEditDeadline(
+                      `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(local.getHours())}:${pad(local.getMinutes())}`
+                    );
+                  }}
+                  className="text-xs text-muted hover:text-white"
+                >
+                  Edit deadline
+                </button>
+              </div>
             </div>
 
             {editId === r.id && (

@@ -1,6 +1,19 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "./database.types";
+
+/**
+ * Service-role Supabase client — bypasses RLS.
+ * ONLY use inside server actions/route handlers that have already verified admin status.
+ * Requires SUPABASE_SERVICE_ROLE_KEY in .env.local
+ */
+export function createAdminClient() {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 /**
  * Server-side Supabase client.

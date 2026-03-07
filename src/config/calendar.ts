@@ -65,7 +65,24 @@ export interface CalendarRace {
   /** Country, for display only */
   country: string;
   /**
+   * true = FP1 / Sprint Qualifying / Sprint Race / Qualifying / Race format.
+   * false (default) = FP1 / FP2 / FP3 / Qualifying / Race format.
+   */
+  is_sprint_weekend?: boolean;
+  // ── Session start times (all UTC ISO 8601, null until populated) ─────────
+  /** FP1 — present on all weekends */
+  fp1_start?: string | null;
+  /** FP2 — standard weekends only (null on sprint weekends) */
+  fp2_start?: string | null;
+  /** FP3 — standard weekends only (null on sprint weekends) */
+  fp3_start?: string | null;
+  /** Sprint Qualifying — sprint weekends only (null on standard weekends) */
+  sprint_qualifying_start?: string | null;
+  /** Sprint Race — sprint weekends only (null on standard weekends) */
+  sprint_race_start?: string | null;
+  /**
    * UTC datetime when qualifying starts — predictions lock at this moment.
+   * Also used as the qualifying session start time.
    * ISO 8601 format: "YYYY-MM-DDTHH:MM:SSZ"
    */
   qualifying_deadline: string;
@@ -77,199 +94,314 @@ export interface CalendarRace {
   race_start: string;
 }
 
-/** Full 2026 F1 season. Qualifying times are set to local start time → UTC. */
+/**
+ * Full 2026 F1 season.
+ * All times are UTC (ISO 8601). Session times converted from the official F1 app
+ * displayed in US Eastern time:
+ *   Pre-8 Mar (Australian GP):  EST = UTC-5  →  add 5h
+ *   8 Mar – 1 Nov:              EDT = UTC-4  →  add 4h
+ *   Las Vegas FP/qualifying:    PST = UTC-8  →  add 8h  (night-race local display)
+ *   Nov onwards:                EST = UTC-5  →  add 5h
+ *
+ * Sprint weekends: FP1 / Sprint Qualifying / Sprint Race / Qualifying / Race
+ * Standard weekends: FP1 / FP2 / FP3 / Qualifying / Race
+ */
 export const CALENDAR_2026: CalendarRace[] = [
+  // ── Round 1 ──────────────────────────────────────────────────────────────
   {
     round: 1,
     race_name: "Australian Grand Prix",
     circuit: "Albert Park Circuit",
     country: "Australia",
-    qualifying_deadline: "2026-03-07T04:00:00Z", // 15:00 AEDT (UTC+11) Sat 7 Mar
-    race_start: "2026-03-08T03:00:00Z",          // 22:00 EST Sun 8 Mar (14:00 AEDT) — Apple TV 10 PM Sat 7 Mar ET
+    fp1_start:           "2026-03-06T00:30:00Z", // Fri  6 Mar 19:30 EST
+    fp2_start:           "2026-03-06T04:00:00Z", // Fri  6 Mar 23:00 EST
+    fp3_start:           "2026-03-07T00:30:00Z", // Sat  7 Mar 19:30 EST
+    qualifying_deadline: "2026-03-07T04:00:00Z", // Sat  7 Mar 23:00 EST — predictions lock
+    race_start:          "2026-03-08T03:00:00Z", // Sun  8 Mar 22:00 EST
   },
+  // ── Round 2 ──────────────────────────────────────────────────────────────
   {
     round: 2,
     race_name: "Chinese Grand Prix",
     circuit: "Shanghai International Circuit",
     country: "China",
-    qualifying_deadline: "2026-03-14T07:00:00Z", // 15:00 CST (UTC+8) Sat 14 Mar
-    race_start: "2026-03-15T06:00:00Z",          // 02:00 EDT Sun 15 Mar (14:00 CST) — Apple TV 2 AM Sun 15 Mar ET
+    is_sprint_weekend: true,
+    fp1_start:                "2026-03-13T02:30:00Z", // Fri 13 Mar 22:30 EDT
+    sprint_qualifying_start:  "2026-03-13T06:30:00Z", // Sat 13 Mar 02:30 EDT — predictions lock
+    sprint_race_start:        "2026-03-14T02:00:00Z", // Sat 13 Mar 22:00 EDT
+    qualifying_deadline:      "2026-03-13T06:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-03-15T06:00:00Z", // Mon 15 Mar 02:00 EDT
   },
+  // ── Round 3 ──────────────────────────────────────────────────────────────
   {
     round: 3,
     race_name: "Japanese Grand Prix",
     circuit: "Suzuka International Racing Course",
     country: "Japan",
-    qualifying_deadline: "2026-03-28T06:00:00Z", // 15:00 JST (UTC+9) Sat 28 Mar
-    race_start: "2026-03-29T04:00:00Z",          // 00:00 EDT Sun 29 Mar (13:00 JST) — Apple TV 12 AM Sun 29 Mar ET
+    fp1_start:           "2026-03-27T01:30:00Z", // Fri 27 Mar 21:30 EDT
+    fp2_start:           "2026-03-27T05:00:00Z", // Sat 27 Mar 01:00 EDT
+    fp3_start:           "2026-03-28T01:30:00Z", // Sat 28 Mar 21:30 EDT
+    qualifying_deadline: "2026-03-28T05:00:00Z", // Sun 28 Mar 01:00 EDT — predictions lock
+    race_start:          "2026-03-29T04:00:00Z", // Sun 29 Mar 00:00 EDT
   },
+  // ── Round 4 ──────────────────────────────────────────────────────────────
   {
     round: 4,
     race_name: "Bahrain Grand Prix",
     circuit: "Bahrain International Circuit",
     country: "Bahrain",
-    qualifying_deadline: "2026-04-11T12:00:00Z", // 15:00 AST (UTC+3) Sat 11 Apr
-    race_start: "2026-04-12T14:00:00Z",          // 10:00 EDT Sun 12 Apr (17:00 AST) — Apple TV 10 AM Sun 12 Apr ET
+    fp1_start:           "2026-04-10T10:30:00Z", // Fri 10 Apr 06:30 EDT
+    fp2_start:           "2026-04-10T14:00:00Z", // Fri 10 Apr 10:00 EDT
+    fp3_start:           "2026-04-11T11:30:00Z", // Sat 11 Apr 07:30 EDT
+    qualifying_deadline: "2026-04-11T15:00:00Z", // Sat 11 Apr 11:00 EDT — predictions lock
+    race_start:          "2026-04-12T14:00:00Z", // Sun 12 Apr 10:00 EDT
   },
+  // ── Round 5 ──────────────────────────────────────────────────────────────
   {
     round: 5,
     race_name: "Saudi Arabian Grand Prix",
     circuit: "Jeddah Corniche Circuit",
     country: "Saudi Arabia",
-    qualifying_deadline: "2026-04-18T12:00:00Z", // 15:00 AST (UTC+3) Sat 18 Apr
-    race_start: "2026-04-19T16:00:00Z",          // 12:00 EDT Sun 19 Apr (19:00 AST) — Apple TV 12 PM Sun 19 Apr ET
+    fp1_start:           "2026-04-17T12:30:00Z", // Fri 17 Apr 08:30 EDT
+    fp2_start:           "2026-04-17T16:00:00Z", // Fri 17 Apr 12:00 EDT
+    fp3_start:           "2026-04-18T12:30:00Z", // Sat 18 Apr 08:30 EDT
+    qualifying_deadline: "2026-04-18T16:00:00Z", // Sat 18 Apr 12:00 EDT — predictions lock
+    race_start:          "2026-04-19T16:00:00Z", // Sun 19 Apr 12:00 EDT
   },
+  // ── Round 6 ──────────────────────────────────────────────────────────────
   {
     round: 6,
     race_name: "Miami Grand Prix",
     circuit: "Miami International Autodrome",
     country: "United States",
-    qualifying_deadline: "2026-05-02T19:00:00Z", // 15:00 EDT (UTC-4) Sat 2 May
-    race_start: "2026-05-03T19:00:00Z",          // 15:00 EDT Sun 3 May — Apple TV 3 PM Sun 3 May ET
+    is_sprint_weekend: true,
+    fp1_start:                "2026-05-01T15:30:00Z", // Fri  1 May 11:30 EDT
+    sprint_qualifying_start:  "2026-05-01T19:30:00Z", // Fri  1 May 15:30 EDT — predictions lock
+    sprint_race_start:        "2026-05-02T15:00:00Z", // Sat  2 May 11:00 EDT
+    qualifying_deadline:      "2026-05-01T19:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-05-03T19:00:00Z", // Sun  3 May 15:00 EDT
   },
+  // ── Round 7 ──────────────────────────────────────────────────────────────
   {
     round: 7,
     race_name: "Canadian Grand Prix",
     circuit: "Circuit Gilles Villeneuve",
     country: "Canada",
-    qualifying_deadline: "2026-05-23T19:00:00Z", // 15:00 EDT (UTC-4) Sat 23 May
-    race_start: "2026-05-24T19:00:00Z",          // 15:00 EDT Sun 24 May — Apple TV 3 PM Sun 24 May ET
+    is_sprint_weekend: true,
+    fp1_start:                "2026-05-22T15:30:00Z", // Fri 22 May 11:30 EDT
+    sprint_qualifying_start:  "2026-05-22T19:30:00Z", // Fri 22 May 15:30 EDT — predictions lock
+    sprint_race_start:        "2026-05-23T15:00:00Z", // Sat 23 May 11:00 EDT
+    qualifying_deadline:      "2026-05-22T19:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-05-24T19:00:00Z", // Sun 24 May 15:00 EDT
   },
+  // ── Round 8 ──────────────────────────────────────────────────────────────
   {
     round: 8,
     race_name: "Monaco Grand Prix",
     circuit: "Circuit de Monaco",
     country: "Monaco",
-    qualifying_deadline: "2026-06-06T13:00:00Z", // 15:00 CEST (UTC+2) Sat 6 Jun
-    race_start: "2026-06-07T12:00:00Z",          // 08:00 EDT Sun 7 Jun (14:00 CEST) — Apple TV 8 AM Sun 7 Jun ET
+    fp1_start:           "2026-06-05T10:30:00Z", // Fri  5 Jun 06:30 EDT
+    fp2_start:           "2026-06-05T14:00:00Z", // Fri  5 Jun 10:00 EDT
+    fp3_start:           "2026-06-06T09:30:00Z", // Sat  6 Jun 05:30 EDT
+    qualifying_deadline: "2026-06-06T13:00:00Z", // Sat  6 Jun 09:00 EDT — predictions lock
+    race_start:          "2026-06-07T12:00:00Z", // Sun  7 Jun 08:00 EDT
   },
+  // ── Round 9 ──────────────────────────────────────────────────────────────
   {
     round: 9,
     race_name: "Barcelona-Catalunya Grand Prix",
     circuit: "Circuit de Barcelona-Catalunya",
     country: "Spain",
-    qualifying_deadline: "2026-06-13T13:00:00Z", // 15:00 CEST (UTC+2) Sat 13 Jun
-    race_start: "2026-06-14T12:00:00Z",          // 08:00 EDT Sun 14 Jun (14:00 CEST) — Apple TV 8 AM Sun 14 Jun ET
+    fp1_start:           "2026-06-12T10:30:00Z", // Fri 12 Jun 06:30 EDT
+    fp2_start:           "2026-06-12T14:00:00Z", // Fri 12 Jun 10:00 EDT
+    fp3_start:           "2026-06-13T09:30:00Z", // Sat 13 Jun 05:30 EDT
+    qualifying_deadline: "2026-06-13T13:00:00Z", // Sat 13 Jun 09:00 EDT — predictions lock
+    race_start:          "2026-06-14T12:00:00Z", // Sun 14 Jun 08:00 EDT
   },
+  // ── Round 10 ─────────────────────────────────────────────────────────────
   {
     round: 10,
     race_name: "Austrian Grand Prix",
     circuit: "Red Bull Ring",
     country: "Austria",
-    qualifying_deadline: "2026-06-27T13:00:00Z", // 15:00 CEST (UTC+2) Sat 27 Jun
-    race_start: "2026-06-28T12:00:00Z",          // 08:00 EDT Sun 28 Jun (14:00 CEST) — Apple TV 8 AM Sun 28 Jun ET
+    fp1_start:           "2026-06-26T10:30:00Z", // Fri 26 Jun 06:30 EDT
+    fp2_start:           "2026-06-26T14:00:00Z", // Fri 26 Jun 10:00 EDT
+    fp3_start:           "2026-06-27T09:30:00Z", // Sat 27 Jun 05:30 EDT
+    qualifying_deadline: "2026-06-27T13:00:00Z", // Sat 27 Jun 09:00 EDT — predictions lock
+    race_start:          "2026-06-28T12:00:00Z", // Sun 28 Jun 08:00 EDT
   },
+  // ── Round 11 ─────────────────────────────────────────────────────────────
   {
     round: 11,
     race_name: "British Grand Prix",
     circuit: "Silverstone Circuit",
     country: "Great Britain",
-    qualifying_deadline: "2026-07-04T14:00:00Z", // 15:00 BST (UTC+1) Sat 4 Jul
-    race_start: "2026-07-05T13:00:00Z",          // 09:00 EDT Sun 5 Jul (14:00 BST) — Apple TV 9 AM Sun 5 Jul ET
+    is_sprint_weekend: true,
+    fp1_start:                "2026-07-03T10:30:00Z", // Fri  3 Jul 06:30 EDT
+    sprint_qualifying_start:  "2026-07-03T14:30:00Z", // Fri  3 Jul 10:30 EDT — predictions lock
+    sprint_race_start:        "2026-07-04T10:00:00Z", // Sat  4 Jul 06:00 EDT
+    qualifying_deadline:      "2026-07-03T14:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-07-05T13:00:00Z", // Sun  5 Jul 09:00 EDT
   },
+  // ── Round 12 ─────────────────────────────────────────────────────────────
   {
     round: 12,
     race_name: "Belgian Grand Prix",
     circuit: "Circuit de Spa-Francorchamps",
     country: "Belgium",
-    qualifying_deadline: "2026-07-18T13:00:00Z", // 15:00 CEST (UTC+2) Sat 18 Jul
-    race_start: "2026-07-19T12:00:00Z",          // 08:00 EDT Sun 19 Jul (14:00 CEST) — Apple TV 8 AM Sun 19 Jul ET
+    fp1_start:           "2026-07-17T10:30:00Z", // Fri 17 Jul 06:30 EDT
+    fp2_start:           "2026-07-17T14:00:00Z", // Fri 17 Jul 10:00 EDT
+    fp3_start:           "2026-07-18T09:30:00Z", // Sat 18 Jul 05:30 EDT
+    qualifying_deadline: "2026-07-18T13:00:00Z", // Sat 18 Jul 09:00 EDT — predictions lock
+    race_start:          "2026-07-19T12:00:00Z", // Sun 19 Jul 08:00 EDT
   },
+  // ── Round 13 ─────────────────────────────────────────────────────────────
   {
     round: 13,
     race_name: "Hungarian Grand Prix",
     circuit: "Hungaroring",
     country: "Hungary",
-    qualifying_deadline: "2026-07-25T13:00:00Z", // 15:00 CEST (UTC+2) Sat 25 Jul
-    race_start: "2026-07-26T12:00:00Z",          // 08:00 EDT Sun 26 Jul (14:00 CEST) — Apple TV 8 AM Sun 26 Jul ET
+    fp1_start:           "2026-07-24T10:30:00Z", // Fri 24 Jul 06:30 EDT
+    fp2_start:           "2026-07-24T14:00:00Z", // Fri 24 Jul 10:00 EDT
+    fp3_start:           "2026-07-25T09:30:00Z", // Sat 25 Jul 05:30 EDT
+    qualifying_deadline: "2026-07-25T13:00:00Z", // Sat 25 Jul 09:00 EDT — predictions lock
+    race_start:          "2026-07-26T12:00:00Z", // Sun 26 Jul 08:00 EDT
   },
+  // ── Round 14 ─────────────────────────────────────────────────────────────
   {
     round: 14,
     race_name: "Dutch Grand Prix",
     circuit: "Circuit Zandvoort",
     country: "Netherlands",
-    qualifying_deadline: "2026-08-22T13:00:00Z", // 15:00 CEST (UTC+2) Sat 22 Aug
-    race_start: "2026-08-23T12:00:00Z",          // 08:00 EDT Sun 23 Aug (14:00 CEST) — Apple TV 8 AM Sun 23 Aug ET
+    is_sprint_weekend: true,
+    fp1_start:                "2026-08-21T09:30:00Z", // Fri 21 Aug 05:30 EDT
+    sprint_qualifying_start:  "2026-08-21T13:30:00Z", // Fri 21 Aug 09:30 EDT — predictions lock
+    sprint_race_start:        "2026-08-22T09:00:00Z", // Sat 22 Aug 05:00 EDT
+    qualifying_deadline:      "2026-08-21T13:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-08-23T12:00:00Z", // Sun 23 Aug 08:00 EDT
   },
+  // ── Round 15 ─────────────────────────────────────────────────────────────
   {
     round: 15,
     race_name: "Italian Grand Prix",
     circuit: "Autodromo Nazionale Monza",
     country: "Italy",
-    qualifying_deadline: "2026-09-05T13:00:00Z", // 15:00 CEST (UTC+2) Sat 5 Sep
-    race_start: "2026-09-06T12:00:00Z",          // 08:00 EDT Sun 6 Sep (14:00 CEST) — Apple TV 8 AM Sun 6 Sep ET
+    fp1_start:           "2026-09-04T09:30:00Z", // Fri  4 Sep 05:30 EDT
+    fp2_start:           "2026-09-04T13:00:00Z", // Fri  4 Sep 09:00 EDT
+    fp3_start:           "2026-09-05T09:30:00Z", // Sat  5 Sep 05:30 EDT
+    qualifying_deadline: "2026-09-05T13:00:00Z", // Sat  5 Sep 09:00 EDT — predictions lock
+    race_start:          "2026-09-06T12:00:00Z", // Sun  6 Sep 08:00 EDT
   },
+  // ── Round 16 ─────────────────────────────────────────────────────────────
   {
     round: 16,
     race_name: "Spanish Grand Prix",
     circuit: "Madring",
     country: "Spain",
-    qualifying_deadline: "2026-09-12T13:00:00Z", // 15:00 CEST (UTC+2) Sat 12 Sep — new Madrid circuit
-    race_start: "2026-09-13T12:00:00Z",          // 08:00 EDT Sun 13 Sep (14:00 CEST) — Apple TV 8 AM Sun 13 Sep ET
+    fp1_start:           "2026-09-11T10:30:00Z", // Fri 11 Sep 06:30 EDT
+    fp2_start:           "2026-09-11T14:00:00Z", // Fri 11 Sep 10:00 EDT
+    fp3_start:           "2026-09-12T09:30:00Z", // Sat 12 Sep 05:30 EDT
+    qualifying_deadline: "2026-09-12T13:00:00Z", // Sat 12 Sep 09:00 EDT — predictions lock
+    race_start:          "2026-09-13T12:00:00Z", // Sun 13 Sep 08:00 EDT
   },
+  // ── Round 17 ─────────────────────────────────────────────────────────────
   {
     round: 17,
     race_name: "Azerbaijan Grand Prix",
     circuit: "Baku City Circuit",
     country: "Azerbaijan",
-    qualifying_deadline: "2026-09-25T11:00:00Z", // 15:00 AZT (UTC+4) Sat 25 Sep
-    race_start: "2026-09-26T10:00:00Z",          // 06:00 EDT Sun 26 Sep (14:00 AZT) — Apple TV 6 AM Sun 26 Sep ET
+    fp1_start:           "2026-09-24T07:30:00Z", // Thu 24 Sep 03:30 EDT
+    fp2_start:           "2026-09-24T11:00:00Z", // Thu 24 Sep 07:00 EDT
+    fp3_start:           "2026-09-25T07:30:00Z", // Fri 25 Sep 03:30 EDT
+    qualifying_deadline: "2026-09-25T11:00:00Z", // Fri 25 Sep 07:00 EDT — predictions lock
+    race_start:          "2026-09-26T10:00:00Z", // Sat 26 Sep 06:00 EDT
   },
+  // ── Round 18 ─────────────────────────────────────────────────────────────
   {
     round: 18,
     race_name: "Singapore Grand Prix",
     circuit: "Marina Bay Street Circuit",
     country: "Singapore",
-    qualifying_deadline: "2026-10-10T13:00:00Z", // 21:00 SGT (UTC+8) Sat 10 Oct — night race
-    race_start: "2026-10-11T11:00:00Z",          // 07:00 EDT Sun 11 Oct (19:00 SGT) — Apple TV 7 AM Sun 11 Oct ET
+    is_sprint_weekend: true,
+    fp1_start:                "2026-10-09T07:30:00Z", // Fri  9 Oct 03:30 EDT
+    sprint_qualifying_start:  "2026-10-09T11:30:00Z", // Fri  9 Oct 07:30 EDT — predictions lock
+    sprint_race_start:        "2026-10-10T08:00:00Z", // Sat 10 Oct 04:00 EDT
+    qualifying_deadline:      "2026-10-09T11:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-10-11T11:00:00Z", // Sun 11 Oct 07:00 EDT
   },
+  // ── Round 19 ─────────────────────────────────────────────────────────────
   {
     round: 19,
     race_name: "United States Grand Prix",
     circuit: "Circuit of the Americas",
     country: "United States",
-    qualifying_deadline: "2026-10-24T20:00:00Z", // 15:00 CDT (UTC-5) Sat 24 Oct
-    race_start: "2026-10-25T19:00:00Z",          // 15:00 EDT Sun 25 Oct — Apple TV 3 PM Sun 25 Oct ET
+    fp1_start:           "2026-10-23T16:30:00Z", // Fri 23 Oct 12:30 EDT
+    fp2_start:           "2026-10-23T20:00:00Z", // Fri 23 Oct 16:00 EDT
+    fp3_start:           "2026-10-24T16:30:00Z", // Sat 24 Oct 12:30 EDT
+    qualifying_deadline: "2026-10-24T20:00:00Z", // Sat 24 Oct 16:00 EDT — predictions lock
+    race_start:          "2026-10-25T19:00:00Z", // Sun 25 Oct 15:00 EDT
   },
+  // ── Round 20 ─────────────────────────────────────────────────────────────
   {
     round: 20,
     race_name: "Mexico City Grand Prix",
     circuit: "Autodromo Hermanos Rodriguez",
     country: "Mexico",
-    qualifying_deadline: "2026-10-31T21:00:00Z", // 15:00 CST (UTC-6) Sat 31 Oct — Mexico has no DST
-    race_start: "2026-11-01T18:00:00Z",          // 14:00 EDT Sun 1 Nov — Apple TV 2 PM Sun 1 Nov ET
+    fp1_start:           "2026-10-30T17:30:00Z", // Fri 30 Oct 13:30 EDT
+    fp2_start:           "2026-10-30T21:00:00Z", // Fri 30 Oct 17:00 EDT
+    fp3_start:           "2026-10-31T16:30:00Z", // Sat 31 Oct 12:30 EDT
+    qualifying_deadline: "2026-10-31T20:00:00Z", // Sat 31 Oct 16:00 EDT — predictions lock
+    race_start:          "2026-11-01T18:00:00Z", // Sun  1 Nov 14:00 EDT
   },
+  // ── Round 21 ─────────────────────────────────────────────────────────────
   {
     round: 21,
     race_name: "São Paulo Grand Prix",
     circuit: "Autodromo Jose Carlos Pace",
     country: "Brazil",
-    qualifying_deadline: "2026-11-07T18:00:00Z", // 15:00 BRT (UTC-3) Sat 7 Nov
-    race_start: "2026-11-08T16:00:00Z",          // 11:00 EST Sun 8 Nov (13:00 BRT) — Apple TV 11 AM Sun 8 Nov ET
+    fp1_start:           "2026-11-06T14:30:00Z", // Fri  6 Nov 09:30 EST
+    fp2_start:           "2026-11-06T18:00:00Z", // Fri  6 Nov 13:00 EST
+    fp3_start:           "2026-11-07T13:30:00Z", // Sat  7 Nov 08:30 EST
+    qualifying_deadline: "2026-11-07T17:00:00Z", // Sat  7 Nov 12:00 EST — predictions lock
+    race_start:          "2026-11-08T16:00:00Z", // Sun  8 Nov 11:00 EST
   },
+  // ── Round 22 ─────────────────────────────────────────────────────────────
+  // Las Vegas FP/qualifying shown in PST (local night-race times, UTC-8)
+  // Race shown in EST (US Eastern broadcast, UTC-5)
   {
     round: 22,
     race_name: "Las Vegas Grand Prix",
     circuit: "Las Vegas Strip Circuit",
     country: "United States",
-    qualifying_deadline: "2026-11-21T06:00:00Z", // 22:00 PST Fri 20 Nov (UTC-8) — night race qualifying
-    race_start: "2026-11-22T03:00:00Z",          // 22:00 EST Sat 21 Nov — Apple TV 10 PM Sat 21 Nov ET
+    fp1_start:           "2026-11-20T02:30:00Z", // Thu 19 Nov 18:30 PST
+    fp2_start:           "2026-11-20T06:00:00Z", // Thu 19 Nov 22:00 PST
+    fp3_start:           "2026-11-21T02:30:00Z", // Fri 20 Nov 18:30 PST
+    qualifying_deadline: "2026-11-21T06:00:00Z", // Fri 20 Nov 22:00 PST — predictions lock
+    race_start:          "2026-11-22T03:00:00Z", // Sat 21 Nov 22:00 EST
   },
+  // ── Round 23 ─────────────────────────────────────────────────────────────
   {
     round: 23,
     race_name: "Qatar Grand Prix",
     circuit: "Lusail International Circuit",
     country: "Qatar",
-    qualifying_deadline: "2026-11-28T12:00:00Z", // 15:00 AST (UTC+3) Sat 28 Nov
-    race_start: "2026-11-29T15:00:00Z",          // 10:00 EST Sun 29 Nov (18:00 AST) — Apple TV 10 AM Sun 29 Nov ET
+    fp1_start:           "2026-11-27T12:30:00Z", // Fri 27 Nov 07:30 EST
+    fp2_start:           "2026-11-27T16:00:00Z", // Fri 27 Nov 11:00 EST
+    fp3_start:           "2026-11-28T13:30:00Z", // Sat 28 Nov 08:30 EST
+    qualifying_deadline: "2026-11-28T17:00:00Z", // Sat 28 Nov 12:00 EST — predictions lock
+    race_start:          "2026-11-29T15:00:00Z", // Sun 29 Nov 10:00 EST
   },
+  // ── Round 24 ─────────────────────────────────────────────────────────────
   {
     round: 24,
     race_name: "Abu Dhabi Grand Prix",
     circuit: "Yas Marina Circuit",
     country: "UAE",
-    qualifying_deadline: "2026-12-05T11:00:00Z", // 15:00 GST (UTC+4) Sat 5 Dec
-    race_start: "2026-12-06T12:00:00Z",          // 07:00 EST Sun 6 Dec (16:00 GST) — Apple TV 7 AM Sun 6 Dec ET
+    fp1_start:           "2026-12-04T08:30:00Z", // Fri  4 Dec 03:30 EST
+    fp2_start:           "2026-12-04T12:00:00Z", // Fri  4 Dec 07:00 EST
+    fp3_start:           "2026-12-05T09:30:00Z", // Sat  5 Dec 04:30 EST
+    qualifying_deadline: "2026-12-05T13:00:00Z", // Sat  5 Dec 08:00 EST — predictions lock
+    race_start:          "2026-12-06T12:00:00Z", // Sun  6 Dec 07:00 EST
   },
 ];
 

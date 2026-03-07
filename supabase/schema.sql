@@ -35,25 +35,36 @@ CREATE TABLE IF NOT EXISTS public.whitelisted_emails (
 -- Admin creates these via the admin panel.
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.race_weekends (
-  id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  season               INTEGER     NOT NULL,
-  round                INTEGER     NOT NULL,
-  race_name            TEXT        NOT NULL,
-  qualifying_deadline  TIMESTAMPTZ NOT NULL,  -- predictions lock at this time
-  race_start           TIMESTAMPTZ,           -- actual race start; used to determine active race
-  p_what_position      INTEGER     NOT NULL CHECK (p_what_position BETWEEN 4 AND 22),
-  results_synced       BOOLEAN     NOT NULL DEFAULT FALSE,
-  created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+  id                       UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  season                   INTEGER     NOT NULL,
+  round                    INTEGER     NOT NULL,
+  race_name                TEXT        NOT NULL,
+  qualifying_deadline      TIMESTAMPTZ NOT NULL,  -- predictions lock at this time (= qualifying session start)
+  race_start               TIMESTAMPTZ,           -- actual race start; used to determine active race
+  p_what_position          INTEGER     NOT NULL CHECK (p_what_position BETWEEN 4 AND 22),
+  results_synced           BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Session schedule (all nullable — populated manually or via future automation)
+  is_sprint_weekend        BOOLEAN     NOT NULL DEFAULT FALSE,
+  fp1_start                TIMESTAMPTZ,           -- all weekends
+  fp2_start                TIMESTAMPTZ,           -- standard weekends only
+  fp3_start                TIMESTAMPTZ,           -- standard weekends only
+  sprint_qualifying_start  TIMESTAMPTZ,           -- sprint weekends only
+  sprint_race_start        TIMESTAMPTZ,           -- sprint weekends only
   UNIQUE (season, round)
 );
 
 -- ────────────────────────────────────────────────────────────
--- MIGRATION: add race_start to an existing race_weekends table
--- Run this if the table already exists without the column.
--- After running, use "Seed from calendar" in the admin panel
--- to populate race_start for all existing rows.
+-- MIGRATION: run these if the table already exists.
+-- Add race_start (older migration) and all session columns.
 -- ────────────────────────────────────────────────────────────
 -- ALTER TABLE public.race_weekends ADD COLUMN IF NOT EXISTS race_start TIMESTAMPTZ;
+-- ALTER TABLE public.race_weekends ADD COLUMN IF NOT EXISTS is_sprint_weekend BOOLEAN NOT NULL DEFAULT FALSE;
+-- ALTER TABLE public.race_weekends ADD COLUMN IF NOT EXISTS fp1_start TIMESTAMPTZ;
+-- ALTER TABLE public.race_weekends ADD COLUMN IF NOT EXISTS fp2_start TIMESTAMPTZ;
+-- ALTER TABLE public.race_weekends ADD COLUMN IF NOT EXISTS fp3_start TIMESTAMPTZ;
+-- ALTER TABLE public.race_weekends ADD COLUMN IF NOT EXISTS sprint_qualifying_start TIMESTAMPTZ;
+-- ALTER TABLE public.race_weekends ADD COLUMN IF NOT EXISTS sprint_race_start TIMESTAMPTZ;
 
 -- ────────────────────────────────────────────────────────────
 -- 4. PREDICTIONS
@@ -144,6 +155,22 @@ CREATE TRIGGER trg_on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- ────────────────────────────────────────────────────────────
+-- 6. RACE RESULTS
+-- Stores raw API results fetched from Jolpica for each race.
+-- One row per race weekend; created/updated when admin syncs.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.race_results (
+  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  race_weekend_id   UUID        NOT NULL UNIQUE REFERENCES public.race_weekends(id) ON DELETE CASCADE,
+  qualifying        JSONB,      -- [{pos:1, code:"VER", name:"Max Verstappen"}, ...]
+  race              JSONB,      -- same format
+  sprint_qualifying JSONB,      -- null if not a sprint weekend
+  sprint_race       JSONB,      -- null if not a sprint weekend
+  last_synced_at    TIMESTAMPTZ,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ════════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY (RLS)
 -- ════════════════════════════════════════════════════════════
@@ -153,6 +180,7 @@ ALTER TABLE public.whitelisted_emails ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.race_weekends     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.predictions       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scores            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.race_results      ENABLE ROW LEVEL SECURITY;
 
 -- ── profiles ──────────────────────────────────────────────
 -- Anyone authenticated can read all profiles (for leaderboard display).
@@ -222,6 +250,26 @@ CREATE POLICY "Users can update own predictions"
   ON public.predictions FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- ── race_results ──────────────────────────────────────────
+-- All authenticated users can read race results.
+CREATE POLICY "Race results readable by authenticated users"
+  ON public.race_results FOR SELECT
+  TO authenticated USING (TRUE);
+
+CREATE POLICY "Only admins can insert race_results"
+  ON public.race_results FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)
+  );
+
+CREATE POLICY "Only admins can update race_results"
+  ON public.race_results FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)
+  );
 
 -- ── scores ────────────────────────────────────────────────
 -- All authenticated users can read scores (for leaderboard).
