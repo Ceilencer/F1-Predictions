@@ -12,12 +12,14 @@ export default async function PredictPage() {
 
   const now = new Date().toISOString();
 
-  // Try the next upcoming race first, then fall back to most recent
+  // Upcoming/active race: earliest race whose start time hasn't passed yet.
+  // Uses race_start so the race shows as active through qualifying (locked) and
+  // up until the race itself begins, not just until the qualifying deadline.
   const { data: upcoming } = await supabase
     .from("race_weekends")
     .select("*")
-    .gt("qualifying_deadline", now)
-    .order("qualifying_deadline", { ascending: true })
+    .gt("race_start", now)
+    .order("race_start", { ascending: true })
     .limit(1)
     .maybeSingle();
 
@@ -26,8 +28,8 @@ export default async function PredictPage() {
     : await supabase
         .from("race_weekends")
         .select("*")
-        .lte("qualifying_deadline", now)
-        .order("qualifying_deadline", { ascending: false })
+        .lte("race_start", now)
+        .order("race_start", { ascending: false })
         .limit(1)
         .maybeSingle();
 

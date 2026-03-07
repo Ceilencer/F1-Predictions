@@ -40,11 +40,20 @@ CREATE TABLE IF NOT EXISTS public.race_weekends (
   round                INTEGER     NOT NULL,
   race_name            TEXT        NOT NULL,
   qualifying_deadline  TIMESTAMPTZ NOT NULL,  -- predictions lock at this time
+  race_start           TIMESTAMPTZ,           -- actual race start; used to determine active race
   p_what_position      INTEGER     NOT NULL CHECK (p_what_position BETWEEN 4 AND 22),
   results_synced       BOOLEAN     NOT NULL DEFAULT FALSE,
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (season, round)
 );
+
+-- ────────────────────────────────────────────────────────────
+-- MIGRATION: add race_start to an existing race_weekends table
+-- Run this if the table already exists without the column.
+-- After running, use "Seed from calendar" in the admin panel
+-- to populate race_start for all existing rows.
+-- ────────────────────────────────────────────────────────────
+-- ALTER TABLE public.race_weekends ADD COLUMN IF NOT EXISTS race_start TIMESTAMPTZ;
 
 -- ────────────────────────────────────────────────────────────
 -- 4. PREDICTIONS

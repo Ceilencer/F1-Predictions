@@ -209,9 +209,9 @@ function RaceSection({ initial }: { initial: RaceWeekend[] }) {
       if (res.error) {
         setMsg({ text: res.error, error: true });
       } else if (res.created === 0) {
-        setMsg({ text: `All 2026 races already exist (${res.skipped} in DB).` });
+        setMsg({ text: `All 2026 races updated (${res.updated} in DB).` });
       } else {
-        setMsg({ text: `Seeded ${res.created} race${res.created !== 1 ? "s" : ""} from the 2026 calendar. ${res.skipped} already existed.` });
+        setMsg({ text: `Seeded ${res.created} new race${res.created !== 1 ? "s" : ""} and updated ${res.updated} existing from the 2026 calendar.` });
       }
     });
   }

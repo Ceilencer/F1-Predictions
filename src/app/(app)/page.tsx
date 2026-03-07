@@ -37,23 +37,25 @@ export default async function DashboardPage() {
 
   const now = new Date().toISOString();
 
-  // Upcoming race: soonest deadline in the future
+  // Upcoming/active race: earliest race whose start time hasn't passed yet.
+  // Uses race_start so the race shows as active through qualifying (locked) and
+  // up until the race itself begins, not just until the qualifying deadline.
   const { data: upcoming } = await supabase
     .from("race_weekends")
     .select("*")
-    .gt("qualifying_deadline", now)
-    .order("qualifying_deadline", { ascending: true })
+    .gt("race_start", now)
+    .order("race_start", { ascending: true })
     .limit(1)
     .maybeSingle();
 
-  // If no upcoming, fall back to the most recent completed race
+  // If no upcoming race (race_start in future), fall back to the most recently started race
   const { data: currentRace } = upcoming
     ? { data: upcoming }
     : await supabase
         .from("race_weekends")
         .select("*")
-        .lte("qualifying_deadline", now)
-        .order("qualifying_deadline", { ascending: false })
+        .lte("race_start", now)
+        .order("race_start", { ascending: false })
         .limit(1)
         .maybeSingle();
 

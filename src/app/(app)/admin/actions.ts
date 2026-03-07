@@ -107,39 +107,45 @@ export async function updateRaceDeadline(
 export async function seedFromCalendar(): Promise<{
   error?: string;
   created?: number;
-  skipped?: number;
+  updated?: number;
 }> {
   const { error: authError, supabase } = await requireAdmin();
   if (authError || !supabase) return { error: authError ?? "Unknown error." };
 
-  // Fetch existing rounds for this season to avoid duplicates
+  // Fetch existing rows to preserve p_what_position and results_synced
   const { data: existing } = await supabase
     .from("race_weekends")
-    .select("*")
+    .select("round, p_what_position, results_synced")
     .eq("season", SEASON);
 
-  const existingRounds = new Set((existing ?? []).map((r) => r.round));
+  const existingMap = new Map((existing ?? []).map((r) => [r.round, r]));
 
-  const toInsert = CALENDAR_2026.filter((r) => !existingRounds.has(r.round)).map((r) => ({
-    season: SEASON,
-    round: r.round,
-    race_name: r.race_name,
-    qualifying_deadline: r.qualifying_deadline,
-    p_what_position: Math.floor(Math.random() * 19) + 4, // random P4–P22
-    results_synced: false,
-  }));
+  // Build upsert payload: new rows get a random position; existing rows keep theirs
+  const rows = CALENDAR_2026.map((r) => {
+    const ex = existingMap.get(r.round);
+    return {
+      season: SEASON,
+      round: r.round,
+      race_name: r.race_name,
+      qualifying_deadline: r.qualifying_deadline,
+      race_start: r.race_start,
+      p_what_position: ex?.p_what_position ?? Math.floor(Math.random() * 19) + 4,
+      results_synced: ex?.results_synced ?? false,
+    };
+  });
 
-  if (toInsert.length === 0) {
-    return { created: 0, skipped: CALENDAR_2026.length };
-  }
+  const { error } = await supabase
+    .from("race_weekends")
+    .upsert(rows, { onConflict: "season,round" });
 
-  const { error } = await supabase.from("race_weekends").insert(toInsert);
   if (error) return { error: error.message };
 
   revalidatePath("/admin");
   revalidatePath("/");
 
-  return { created: toInsert.length, skipped: existingRounds.size };
+  const created = rows.filter((r) => !existingMap.has(r.round)).length;
+  const updated = rows.filter((r) => existingMap.has(r.round)).length;
+  return { created, updated };
 }
 
 // ── subjective scoring ────────────────────────────────────────────────────────

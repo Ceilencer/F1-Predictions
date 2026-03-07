@@ -70,6 +70,7 @@ export interface Database {
           round: number;
           race_name: string;
           qualifying_deadline: string;
+          race_start: string | null;
           p_what_position: number;
           results_synced: boolean;
           created_at: string;
@@ -80,6 +81,7 @@ export interface Database {
           round: number;
           race_name: string;
           qualifying_deadline: string;
+          race_start?: string | null;
           p_what_position: number;
           results_synced?: boolean;
           created_at?: string;
@@ -90,6 +92,7 @@ export interface Database {
           round?: number;
           race_name?: string;
           qualifying_deadline?: string;
+          race_start?: string | null;
           p_what_position?: number;
           results_synced?: boolean;
           created_at?: string;
