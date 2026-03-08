@@ -46,11 +46,14 @@ export default async function PredictPage() {
         .maybeSingle()
     : { data: null };
 
-  // Predictions open 12 hours after the previous race starts (approx. when it ends).
+  // Predictions open 12 hours after the previous race starts.
   // If there's no previous race (season opener), predictions open immediately.
   const predictionsOpenAt = previousRace
     ? new Date(new Date(previousRace.race_start).getTime() + 12 * 60 * 60 * 1000).toISOString()
     : null;
+
+  // Computed server-side so the gate is based on server time, not the client clock.
+  const notOpenYet = !!predictionsOpenAt && now < new Date(predictionsOpenAt);
 
   // Existing prediction for this race
   const { data: existing } = raceWeekend
@@ -81,6 +84,7 @@ export default async function PredictPage() {
           existing={existing}
           isLocked={isLocked}
           predictionsOpenAt={predictionsOpenAt}
+          notOpenYet={notOpenYet}
         />
       )}
     </div>

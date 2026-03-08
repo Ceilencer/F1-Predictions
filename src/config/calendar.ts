@@ -98,10 +98,10 @@ export interface CalendarRace {
  * Full 2026 F1 season.
  * All times are UTC (ISO 8601). Session times converted from the official F1 app
  * displayed in US Eastern time:
- *   Pre-8 Mar (Australian GP):  EST = UTC-5  →  add 5h
- *   8 Mar – 1 Nov:              EDT = UTC-4  →  add 4h
- *   Las Vegas FP/qualifying:    PST = UTC-8  →  add 8h  (night-race local display)
- *   Nov onwards:                EST = UTC-5  →  add 5h
+ *   Pre-8 Mar (Australian GP):  CST = UTC-6  →  add 6h
+ *   8 Mar – 1 Nov:              CDT = UTC-5  →  add 5h
+ *   Las Vegas FP/qualifying:    PST = UTC-8  →  add 8h  (local night-race times, already correct)
+ *   Nov onwards:                CST = UTC-6  →  add 6h
  *
  * Sprint weekends: FP1 / Sprint Qualifying / Sprint Race / Qualifying / Race
  * Standard weekends: FP1 / FP2 / FP3 / Qualifying / Race
@@ -113,11 +113,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Australian Grand Prix",
     circuit: "Albert Park Circuit",
     country: "Australia",
-    fp1_start:           "2026-03-06T00:30:00Z", // Fri  6 Mar 19:30 EST
-    fp2_start:           "2026-03-06T04:00:00Z", // Fri  6 Mar 23:00 EST
-    fp3_start:           "2026-03-07T00:30:00Z", // Sat  7 Mar 19:30 EST
-    qualifying_deadline: "2026-03-07T04:00:00Z", // Sat  7 Mar 23:00 EST — predictions lock
-    race_start:          "2026-03-08T03:00:00Z", // Sun  8 Mar 22:00 EST
+    fp1_start:           "2026-03-06T01:30:00Z", // Fri  6 Mar 19:30 CST
+    fp2_start:           "2026-03-06T05:00:00Z", // Fri  6 Mar 23:00 CST
+    fp3_start:           "2026-03-07T01:30:00Z", // Sat  7 Mar 19:30 CST
+    qualifying_deadline: "2026-03-07T05:00:00Z", // Sat  7 Mar 23:00 CST — predictions lock
+    race_start:          "2026-03-08T04:00:00Z", // Sun  8 Mar 22:00 CST (10pm — user confirmed)
   },
   // ── Round 2 ──────────────────────────────────────────────────────────────
   {
@@ -126,11 +126,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     circuit: "Shanghai International Circuit",
     country: "China",
     is_sprint_weekend: true,
-    fp1_start:                "2026-03-13T02:30:00Z", // Fri 13 Mar 22:30 EDT
-    sprint_qualifying_start:  "2026-03-13T06:30:00Z", // Sat 13 Mar 02:30 EDT — predictions lock
-    sprint_race_start:        "2026-03-14T02:00:00Z", // Sat 13 Mar 22:00 EDT
-    qualifying_deadline:      "2026-03-13T06:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
-    race_start:               "2026-03-15T06:00:00Z", // Mon 15 Mar 02:00 EDT
+    fp1_start:                "2026-03-13T03:30:00Z", // Fri 13 Mar 22:30 CDT
+    sprint_qualifying_start:  "2026-03-13T07:30:00Z", // Sat 13 Mar 02:30 CDT — predictions lock
+    sprint_race_start:        "2026-03-14T03:00:00Z", // Sat 13 Mar 22:00 CDT
+    qualifying_deadline:      "2026-03-13T07:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-03-15T07:00:00Z", // Mon 15 Mar 02:00 CDT
   },
   // ── Round 3 ──────────────────────────────────────────────────────────────
   {
@@ -138,11 +138,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Japanese Grand Prix",
     circuit: "Suzuka International Racing Course",
     country: "Japan",
-    fp1_start:           "2026-03-27T01:30:00Z", // Fri 27 Mar 21:30 EDT
-    fp2_start:           "2026-03-27T05:00:00Z", // Sat 27 Mar 01:00 EDT
-    fp3_start:           "2026-03-28T01:30:00Z", // Sat 28 Mar 21:30 EDT
-    qualifying_deadline: "2026-03-28T05:00:00Z", // Sun 28 Mar 01:00 EDT — predictions lock
-    race_start:          "2026-03-29T04:00:00Z", // Sun 29 Mar 00:00 EDT
+    fp1_start:           "2026-03-27T02:30:00Z", // Fri 27 Mar 21:30 CDT
+    fp2_start:           "2026-03-27T06:00:00Z", // Sat 27 Mar 01:00 CDT
+    fp3_start:           "2026-03-28T02:30:00Z", // Sat 28 Mar 21:30 CDT
+    qualifying_deadline: "2026-03-28T06:00:00Z", // Sun 28 Mar 01:00 CDT — predictions lock
+    race_start:          "2026-03-29T05:00:00Z", // Sun 29 Mar 00:00 CDT
   },
   // ── Round 4 ──────────────────────────────────────────────────────────────
   {
@@ -150,11 +150,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Bahrain Grand Prix",
     circuit: "Bahrain International Circuit",
     country: "Bahrain",
-    fp1_start:           "2026-04-10T10:30:00Z", // Fri 10 Apr 06:30 EDT
-    fp2_start:           "2026-04-10T14:00:00Z", // Fri 10 Apr 10:00 EDT
-    fp3_start:           "2026-04-11T11:30:00Z", // Sat 11 Apr 07:30 EDT
-    qualifying_deadline: "2026-04-11T15:00:00Z", // Sat 11 Apr 11:00 EDT — predictions lock
-    race_start:          "2026-04-12T14:00:00Z", // Sun 12 Apr 10:00 EDT
+    fp1_start:           "2026-04-10T11:30:00Z", // Fri 10 Apr 06:30 CDT
+    fp2_start:           "2026-04-10T15:00:00Z", // Fri 10 Apr 10:00 CDT
+    fp3_start:           "2026-04-11T12:30:00Z", // Sat 11 Apr 07:30 CDT
+    qualifying_deadline: "2026-04-11T16:00:00Z", // Sat 11 Apr 11:00 CDT — predictions lock
+    race_start:          "2026-04-12T15:00:00Z", // Sun 12 Apr 10:00 CDT
   },
   // ── Round 5 ──────────────────────────────────────────────────────────────
   {
@@ -162,11 +162,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Saudi Arabian Grand Prix",
     circuit: "Jeddah Corniche Circuit",
     country: "Saudi Arabia",
-    fp1_start:           "2026-04-17T12:30:00Z", // Fri 17 Apr 08:30 EDT
-    fp2_start:           "2026-04-17T16:00:00Z", // Fri 17 Apr 12:00 EDT
-    fp3_start:           "2026-04-18T12:30:00Z", // Sat 18 Apr 08:30 EDT
-    qualifying_deadline: "2026-04-18T16:00:00Z", // Sat 18 Apr 12:00 EDT — predictions lock
-    race_start:          "2026-04-19T16:00:00Z", // Sun 19 Apr 12:00 EDT
+    fp1_start:           "2026-04-17T13:30:00Z", // Fri 17 Apr 08:30 CDT
+    fp2_start:           "2026-04-17T17:00:00Z", // Fri 17 Apr 12:00 CDT
+    fp3_start:           "2026-04-18T13:30:00Z", // Sat 18 Apr 08:30 CDT
+    qualifying_deadline: "2026-04-18T17:00:00Z", // Sat 18 Apr 12:00 CDT — predictions lock
+    race_start:          "2026-04-19T17:00:00Z", // Sun 19 Apr 12:00 CDT
   },
   // ── Round 6 ──────────────────────────────────────────────────────────────
   {
@@ -175,11 +175,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     circuit: "Miami International Autodrome",
     country: "United States",
     is_sprint_weekend: true,
-    fp1_start:                "2026-05-01T15:30:00Z", // Fri  1 May 11:30 EDT
-    sprint_qualifying_start:  "2026-05-01T19:30:00Z", // Fri  1 May 15:30 EDT — predictions lock
-    sprint_race_start:        "2026-05-02T15:00:00Z", // Sat  2 May 11:00 EDT
-    qualifying_deadline:      "2026-05-01T19:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
-    race_start:               "2026-05-03T19:00:00Z", // Sun  3 May 15:00 EDT
+    fp1_start:                "2026-05-01T16:30:00Z", // Fri  1 May 11:30 CDT
+    sprint_qualifying_start:  "2026-05-01T20:30:00Z", // Fri  1 May 15:30 CDT — predictions lock
+    sprint_race_start:        "2026-05-02T16:00:00Z", // Sat  2 May 11:00 CDT
+    qualifying_deadline:      "2026-05-01T20:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-05-03T20:00:00Z", // Sun  3 May 15:00 CDT
   },
   // ── Round 7 ──────────────────────────────────────────────────────────────
   {
@@ -188,11 +188,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     circuit: "Circuit Gilles Villeneuve",
     country: "Canada",
     is_sprint_weekend: true,
-    fp1_start:                "2026-05-22T15:30:00Z", // Fri 22 May 11:30 EDT
-    sprint_qualifying_start:  "2026-05-22T19:30:00Z", // Fri 22 May 15:30 EDT — predictions lock
-    sprint_race_start:        "2026-05-23T15:00:00Z", // Sat 23 May 11:00 EDT
-    qualifying_deadline:      "2026-05-22T19:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
-    race_start:               "2026-05-24T19:00:00Z", // Sun 24 May 15:00 EDT
+    fp1_start:                "2026-05-22T16:30:00Z", // Fri 22 May 11:30 CDT
+    sprint_qualifying_start:  "2026-05-22T20:30:00Z", // Fri 22 May 15:30 CDT — predictions lock
+    sprint_race_start:        "2026-05-23T16:00:00Z", // Sat 23 May 11:00 CDT
+    qualifying_deadline:      "2026-05-22T20:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-05-24T20:00:00Z", // Sun 24 May 15:00 CDT
   },
   // ── Round 8 ──────────────────────────────────────────────────────────────
   {
@@ -200,11 +200,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Monaco Grand Prix",
     circuit: "Circuit de Monaco",
     country: "Monaco",
-    fp1_start:           "2026-06-05T10:30:00Z", // Fri  5 Jun 06:30 EDT
-    fp2_start:           "2026-06-05T14:00:00Z", // Fri  5 Jun 10:00 EDT
-    fp3_start:           "2026-06-06T09:30:00Z", // Sat  6 Jun 05:30 EDT
-    qualifying_deadline: "2026-06-06T13:00:00Z", // Sat  6 Jun 09:00 EDT — predictions lock
-    race_start:          "2026-06-07T12:00:00Z", // Sun  7 Jun 08:00 EDT
+    fp1_start:           "2026-06-05T11:30:00Z", // Fri  5 Jun 06:30 CDT
+    fp2_start:           "2026-06-05T15:00:00Z", // Fri  5 Jun 10:00 CDT
+    fp3_start:           "2026-06-06T10:30:00Z", // Sat  6 Jun 05:30 CDT
+    qualifying_deadline: "2026-06-06T14:00:00Z", // Sat  6 Jun 09:00 CDT — predictions lock
+    race_start:          "2026-06-07T13:00:00Z", // Sun  7 Jun 08:00 CDT
   },
   // ── Round 9 ──────────────────────────────────────────────────────────────
   {
@@ -212,11 +212,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Barcelona-Catalunya Grand Prix",
     circuit: "Circuit de Barcelona-Catalunya",
     country: "Spain",
-    fp1_start:           "2026-06-12T10:30:00Z", // Fri 12 Jun 06:30 EDT
-    fp2_start:           "2026-06-12T14:00:00Z", // Fri 12 Jun 10:00 EDT
-    fp3_start:           "2026-06-13T09:30:00Z", // Sat 13 Jun 05:30 EDT
-    qualifying_deadline: "2026-06-13T13:00:00Z", // Sat 13 Jun 09:00 EDT — predictions lock
-    race_start:          "2026-06-14T12:00:00Z", // Sun 14 Jun 08:00 EDT
+    fp1_start:           "2026-06-12T11:30:00Z", // Fri 12 Jun 06:30 CDT
+    fp2_start:           "2026-06-12T15:00:00Z", // Fri 12 Jun 10:00 CDT
+    fp3_start:           "2026-06-13T10:30:00Z", // Sat 13 Jun 05:30 CDT
+    qualifying_deadline: "2026-06-13T14:00:00Z", // Sat 13 Jun 09:00 CDT — predictions lock
+    race_start:          "2026-06-14T13:00:00Z", // Sun 14 Jun 08:00 CDT
   },
   // ── Round 10 ─────────────────────────────────────────────────────────────
   {
@@ -224,11 +224,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Austrian Grand Prix",
     circuit: "Red Bull Ring",
     country: "Austria",
-    fp1_start:           "2026-06-26T10:30:00Z", // Fri 26 Jun 06:30 EDT
-    fp2_start:           "2026-06-26T14:00:00Z", // Fri 26 Jun 10:00 EDT
-    fp3_start:           "2026-06-27T09:30:00Z", // Sat 27 Jun 05:30 EDT
-    qualifying_deadline: "2026-06-27T13:00:00Z", // Sat 27 Jun 09:00 EDT — predictions lock
-    race_start:          "2026-06-28T12:00:00Z", // Sun 28 Jun 08:00 EDT
+    fp1_start:           "2026-06-26T11:30:00Z", // Fri 26 Jun 06:30 CDT
+    fp2_start:           "2026-06-26T15:00:00Z", // Fri 26 Jun 10:00 CDT
+    fp3_start:           "2026-06-27T10:30:00Z", // Sat 27 Jun 05:30 CDT
+    qualifying_deadline: "2026-06-27T14:00:00Z", // Sat 27 Jun 09:00 CDT — predictions lock
+    race_start:          "2026-06-28T13:00:00Z", // Sun 28 Jun 08:00 CDT
   },
   // ── Round 11 ─────────────────────────────────────────────────────────────
   {
@@ -237,11 +237,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     circuit: "Silverstone Circuit",
     country: "Great Britain",
     is_sprint_weekend: true,
-    fp1_start:                "2026-07-03T10:30:00Z", // Fri  3 Jul 06:30 EDT
-    sprint_qualifying_start:  "2026-07-03T14:30:00Z", // Fri  3 Jul 10:30 EDT — predictions lock
-    sprint_race_start:        "2026-07-04T10:00:00Z", // Sat  4 Jul 06:00 EDT
-    qualifying_deadline:      "2026-07-03T14:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
-    race_start:               "2026-07-05T13:00:00Z", // Sun  5 Jul 09:00 EDT
+    fp1_start:                "2026-07-03T11:30:00Z", // Fri  3 Jul 06:30 CDT
+    sprint_qualifying_start:  "2026-07-03T15:30:00Z", // Fri  3 Jul 10:30 CDT — predictions lock
+    sprint_race_start:        "2026-07-04T11:00:00Z", // Sat  4 Jul 06:00 CDT
+    qualifying_deadline:      "2026-07-03T15:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-07-05T14:00:00Z", // Sun  5 Jul 09:00 CDT
   },
   // ── Round 12 ─────────────────────────────────────────────────────────────
   {
@@ -249,11 +249,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Belgian Grand Prix",
     circuit: "Circuit de Spa-Francorchamps",
     country: "Belgium",
-    fp1_start:           "2026-07-17T10:30:00Z", // Fri 17 Jul 06:30 EDT
-    fp2_start:           "2026-07-17T14:00:00Z", // Fri 17 Jul 10:00 EDT
-    fp3_start:           "2026-07-18T09:30:00Z", // Sat 18 Jul 05:30 EDT
-    qualifying_deadline: "2026-07-18T13:00:00Z", // Sat 18 Jul 09:00 EDT — predictions lock
-    race_start:          "2026-07-19T12:00:00Z", // Sun 19 Jul 08:00 EDT
+    fp1_start:           "2026-07-17T11:30:00Z", // Fri 17 Jul 06:30 CDT
+    fp2_start:           "2026-07-17T15:00:00Z", // Fri 17 Jul 10:00 CDT
+    fp3_start:           "2026-07-18T10:30:00Z", // Sat 18 Jul 05:30 CDT
+    qualifying_deadline: "2026-07-18T14:00:00Z", // Sat 18 Jul 09:00 CDT — predictions lock
+    race_start:          "2026-07-19T13:00:00Z", // Sun 19 Jul 08:00 CDT
   },
   // ── Round 13 ─────────────────────────────────────────────────────────────
   {
@@ -261,11 +261,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Hungarian Grand Prix",
     circuit: "Hungaroring",
     country: "Hungary",
-    fp1_start:           "2026-07-24T10:30:00Z", // Fri 24 Jul 06:30 EDT
-    fp2_start:           "2026-07-24T14:00:00Z", // Fri 24 Jul 10:00 EDT
-    fp3_start:           "2026-07-25T09:30:00Z", // Sat 25 Jul 05:30 EDT
-    qualifying_deadline: "2026-07-25T13:00:00Z", // Sat 25 Jul 09:00 EDT — predictions lock
-    race_start:          "2026-07-26T12:00:00Z", // Sun 26 Jul 08:00 EDT
+    fp1_start:           "2026-07-24T11:30:00Z", // Fri 24 Jul 06:30 CDT
+    fp2_start:           "2026-07-24T15:00:00Z", // Fri 24 Jul 10:00 CDT
+    fp3_start:           "2026-07-25T10:30:00Z", // Sat 25 Jul 05:30 CDT
+    qualifying_deadline: "2026-07-25T14:00:00Z", // Sat 25 Jul 09:00 CDT — predictions lock
+    race_start:          "2026-07-26T13:00:00Z", // Sun 26 Jul 08:00 CDT
   },
   // ── Round 14 ─────────────────────────────────────────────────────────────
   {
@@ -274,11 +274,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     circuit: "Circuit Zandvoort",
     country: "Netherlands",
     is_sprint_weekend: true,
-    fp1_start:                "2026-08-21T09:30:00Z", // Fri 21 Aug 05:30 EDT
-    sprint_qualifying_start:  "2026-08-21T13:30:00Z", // Fri 21 Aug 09:30 EDT — predictions lock
-    sprint_race_start:        "2026-08-22T09:00:00Z", // Sat 22 Aug 05:00 EDT
-    qualifying_deadline:      "2026-08-21T13:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
-    race_start:               "2026-08-23T12:00:00Z", // Sun 23 Aug 08:00 EDT
+    fp1_start:                "2026-08-21T10:30:00Z", // Fri 21 Aug 05:30 CDT
+    sprint_qualifying_start:  "2026-08-21T14:30:00Z", // Fri 21 Aug 09:30 CDT — predictions lock
+    sprint_race_start:        "2026-08-22T10:00:00Z", // Sat 22 Aug 05:00 CDT
+    qualifying_deadline:      "2026-08-21T14:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-08-23T13:00:00Z", // Sun 23 Aug 08:00 CDT
   },
   // ── Round 15 ─────────────────────────────────────────────────────────────
   {
@@ -286,11 +286,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Italian Grand Prix",
     circuit: "Autodromo Nazionale Monza",
     country: "Italy",
-    fp1_start:           "2026-09-04T09:30:00Z", // Fri  4 Sep 05:30 EDT
-    fp2_start:           "2026-09-04T13:00:00Z", // Fri  4 Sep 09:00 EDT
-    fp3_start:           "2026-09-05T09:30:00Z", // Sat  5 Sep 05:30 EDT
-    qualifying_deadline: "2026-09-05T13:00:00Z", // Sat  5 Sep 09:00 EDT — predictions lock
-    race_start:          "2026-09-06T12:00:00Z", // Sun  6 Sep 08:00 EDT
+    fp1_start:           "2026-09-04T10:30:00Z", // Fri  4 Sep 05:30 CDT
+    fp2_start:           "2026-09-04T14:00:00Z", // Fri  4 Sep 09:00 CDT
+    fp3_start:           "2026-09-05T10:30:00Z", // Sat  5 Sep 05:30 CDT
+    qualifying_deadline: "2026-09-05T14:00:00Z", // Sat  5 Sep 09:00 CDT — predictions lock
+    race_start:          "2026-09-06T13:00:00Z", // Sun  6 Sep 08:00 CDT
   },
   // ── Round 16 ─────────────────────────────────────────────────────────────
   {
@@ -298,11 +298,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Spanish Grand Prix",
     circuit: "Madring",
     country: "Spain",
-    fp1_start:           "2026-09-11T10:30:00Z", // Fri 11 Sep 06:30 EDT
-    fp2_start:           "2026-09-11T14:00:00Z", // Fri 11 Sep 10:00 EDT
-    fp3_start:           "2026-09-12T09:30:00Z", // Sat 12 Sep 05:30 EDT
-    qualifying_deadline: "2026-09-12T13:00:00Z", // Sat 12 Sep 09:00 EDT — predictions lock
-    race_start:          "2026-09-13T12:00:00Z", // Sun 13 Sep 08:00 EDT
+    fp1_start:           "2026-09-11T11:30:00Z", // Fri 11 Sep 06:30 CDT
+    fp2_start:           "2026-09-11T15:00:00Z", // Fri 11 Sep 10:00 CDT
+    fp3_start:           "2026-09-12T10:30:00Z", // Sat 12 Sep 05:30 CDT
+    qualifying_deadline: "2026-09-12T14:00:00Z", // Sat 12 Sep 09:00 CDT — predictions lock
+    race_start:          "2026-09-13T13:00:00Z", // Sun 13 Sep 08:00 CDT
   },
   // ── Round 17 ─────────────────────────────────────────────────────────────
   {
@@ -310,11 +310,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Azerbaijan Grand Prix",
     circuit: "Baku City Circuit",
     country: "Azerbaijan",
-    fp1_start:           "2026-09-24T07:30:00Z", // Thu 24 Sep 03:30 EDT
-    fp2_start:           "2026-09-24T11:00:00Z", // Thu 24 Sep 07:00 EDT
-    fp3_start:           "2026-09-25T07:30:00Z", // Fri 25 Sep 03:30 EDT
-    qualifying_deadline: "2026-09-25T11:00:00Z", // Fri 25 Sep 07:00 EDT — predictions lock
-    race_start:          "2026-09-26T10:00:00Z", // Sat 26 Sep 06:00 EDT
+    fp1_start:           "2026-09-24T08:30:00Z", // Thu 24 Sep 03:30 CDT
+    fp2_start:           "2026-09-24T12:00:00Z", // Thu 24 Sep 07:00 CDT
+    fp3_start:           "2026-09-25T08:30:00Z", // Fri 25 Sep 03:30 CDT
+    qualifying_deadline: "2026-09-25T12:00:00Z", // Fri 25 Sep 07:00 CDT — predictions lock
+    race_start:          "2026-09-26T11:00:00Z", // Sat 26 Sep 06:00 CDT
   },
   // ── Round 18 ─────────────────────────────────────────────────────────────
   {
@@ -323,11 +323,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     circuit: "Marina Bay Street Circuit",
     country: "Singapore",
     is_sprint_weekend: true,
-    fp1_start:                "2026-10-09T07:30:00Z", // Fri  9 Oct 03:30 EDT
-    sprint_qualifying_start:  "2026-10-09T11:30:00Z", // Fri  9 Oct 07:30 EDT — predictions lock
-    sprint_race_start:        "2026-10-10T08:00:00Z", // Sat 10 Oct 04:00 EDT
-    qualifying_deadline:      "2026-10-09T11:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
-    race_start:               "2026-10-11T11:00:00Z", // Sun 11 Oct 07:00 EDT
+    fp1_start:                "2026-10-09T08:30:00Z", // Fri  9 Oct 03:30 CDT
+    sprint_qualifying_start:  "2026-10-09T12:30:00Z", // Fri  9 Oct 07:30 CDT — predictions lock
+    sprint_race_start:        "2026-10-10T09:00:00Z", // Sat 10 Oct 04:00 CDT
+    qualifying_deadline:      "2026-10-09T12:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
+    race_start:               "2026-10-11T12:00:00Z", // Sun 11 Oct 07:00 CDT
   },
   // ── Round 19 ─────────────────────────────────────────────────────────────
   {
@@ -335,11 +335,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "United States Grand Prix",
     circuit: "Circuit of the Americas",
     country: "United States",
-    fp1_start:           "2026-10-23T16:30:00Z", // Fri 23 Oct 12:30 EDT
-    fp2_start:           "2026-10-23T20:00:00Z", // Fri 23 Oct 16:00 EDT
-    fp3_start:           "2026-10-24T16:30:00Z", // Sat 24 Oct 12:30 EDT
-    qualifying_deadline: "2026-10-24T20:00:00Z", // Sat 24 Oct 16:00 EDT — predictions lock
-    race_start:          "2026-10-25T19:00:00Z", // Sun 25 Oct 15:00 EDT
+    fp1_start:           "2026-10-23T17:30:00Z", // Fri 23 Oct 12:30 CDT
+    fp2_start:           "2026-10-23T21:00:00Z", // Fri 23 Oct 16:00 CDT
+    fp3_start:           "2026-10-24T17:30:00Z", // Sat 24 Oct 12:30 CDT
+    qualifying_deadline: "2026-10-24T21:00:00Z", // Sat 24 Oct 16:00 CDT — predictions lock
+    race_start:          "2026-10-25T20:00:00Z", // Sun 25 Oct 15:00 CDT
   },
   // ── Round 20 ─────────────────────────────────────────────────────────────
   {
@@ -347,11 +347,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Mexico City Grand Prix",
     circuit: "Autodromo Hermanos Rodriguez",
     country: "Mexico",
-    fp1_start:           "2026-10-30T17:30:00Z", // Fri 30 Oct 13:30 EDT
-    fp2_start:           "2026-10-30T21:00:00Z", // Fri 30 Oct 17:00 EDT
-    fp3_start:           "2026-10-31T16:30:00Z", // Sat 31 Oct 12:30 EDT
-    qualifying_deadline: "2026-10-31T20:00:00Z", // Sat 31 Oct 16:00 EDT — predictions lock
-    race_start:          "2026-11-01T18:00:00Z", // Sun  1 Nov 14:00 EDT
+    fp1_start:           "2026-10-30T18:30:00Z", // Fri 30 Oct 13:30 CDT
+    fp2_start:           "2026-10-30T22:00:00Z", // Fri 30 Oct 17:00 CDT
+    fp3_start:           "2026-10-31T17:30:00Z", // Sat 31 Oct 12:30 CDT
+    qualifying_deadline: "2026-10-31T21:00:00Z", // Sat 31 Oct 16:00 CDT — predictions lock
+    race_start:          "2026-11-01T19:00:00Z", // Sun  1 Nov 14:00 CDT
   },
   // ── Round 21 ─────────────────────────────────────────────────────────────
   {
@@ -359,25 +359,25 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "São Paulo Grand Prix",
     circuit: "Autodromo Jose Carlos Pace",
     country: "Brazil",
-    fp1_start:           "2026-11-06T14:30:00Z", // Fri  6 Nov 09:30 EST
-    fp2_start:           "2026-11-06T18:00:00Z", // Fri  6 Nov 13:00 EST
-    fp3_start:           "2026-11-07T13:30:00Z", // Sat  7 Nov 08:30 EST
-    qualifying_deadline: "2026-11-07T17:00:00Z", // Sat  7 Nov 12:00 EST — predictions lock
-    race_start:          "2026-11-08T16:00:00Z", // Sun  8 Nov 11:00 EST
+    fp1_start:           "2026-11-06T15:30:00Z", // Fri  6 Nov 09:30 CST
+    fp2_start:           "2026-11-06T19:00:00Z", // Fri  6 Nov 13:00 CST
+    fp3_start:           "2026-11-07T14:30:00Z", // Sat  7 Nov 08:30 CST
+    qualifying_deadline: "2026-11-07T18:00:00Z", // Sat  7 Nov 12:00 CST — predictions lock
+    race_start:          "2026-11-08T17:00:00Z", // Sun  8 Nov 11:00 CST
   },
   // ── Round 22 ─────────────────────────────────────────────────────────────
   // Las Vegas FP/qualifying shown in PST (local night-race times, UTC-8)
-  // Race shown in EST (US Eastern broadcast, UTC-5)
+  // PST+8h = CST+6h so these are already correct — no adjustment needed.
   {
     round: 22,
     race_name: "Las Vegas Grand Prix",
     circuit: "Las Vegas Strip Circuit",
     country: "United States",
-    fp1_start:           "2026-11-20T02:30:00Z", // Thu 19 Nov 18:30 PST
-    fp2_start:           "2026-11-20T06:00:00Z", // Thu 19 Nov 22:00 PST
-    fp3_start:           "2026-11-21T02:30:00Z", // Fri 20 Nov 18:30 PST
-    qualifying_deadline: "2026-11-21T06:00:00Z", // Fri 20 Nov 22:00 PST — predictions lock
-    race_start:          "2026-11-22T03:00:00Z", // Sat 21 Nov 22:00 EST
+    fp1_start:           "2026-11-20T02:30:00Z", // Thu 19 Nov 18:30 PST / 20:30 CST
+    fp2_start:           "2026-11-20T06:00:00Z", // Thu 19 Nov 22:00 PST / Fri 00:00 CST
+    fp3_start:           "2026-11-21T02:30:00Z", // Fri 20 Nov 18:30 PST / 20:30 CST
+    qualifying_deadline: "2026-11-21T06:00:00Z", // Fri 20 Nov 22:00 PST / Sat 00:00 CST — predictions lock
+    race_start:          "2026-11-22T03:00:00Z", // Sat 21 Nov 21:00 CST
   },
   // ── Round 23 ─────────────────────────────────────────────────────────────
   {
@@ -385,11 +385,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Qatar Grand Prix",
     circuit: "Lusail International Circuit",
     country: "Qatar",
-    fp1_start:           "2026-11-27T12:30:00Z", // Fri 27 Nov 07:30 EST
-    fp2_start:           "2026-11-27T16:00:00Z", // Fri 27 Nov 11:00 EST
-    fp3_start:           "2026-11-28T13:30:00Z", // Sat 28 Nov 08:30 EST
-    qualifying_deadline: "2026-11-28T17:00:00Z", // Sat 28 Nov 12:00 EST — predictions lock
-    race_start:          "2026-11-29T15:00:00Z", // Sun 29 Nov 10:00 EST
+    fp1_start:           "2026-11-27T13:30:00Z", // Fri 27 Nov 07:30 CST
+    fp2_start:           "2026-11-27T17:00:00Z", // Fri 27 Nov 11:00 CST
+    fp3_start:           "2026-11-28T14:30:00Z", // Sat 28 Nov 08:30 CST
+    qualifying_deadline: "2026-11-28T18:00:00Z", // Sat 28 Nov 12:00 CST — predictions lock
+    race_start:          "2026-11-29T16:00:00Z", // Sun 29 Nov 10:00 CST
   },
   // ── Round 24 ─────────────────────────────────────────────────────────────
   {
@@ -397,11 +397,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_name: "Abu Dhabi Grand Prix",
     circuit: "Yas Marina Circuit",
     country: "UAE",
-    fp1_start:           "2026-12-04T08:30:00Z", // Fri  4 Dec 03:30 EST
-    fp2_start:           "2026-12-04T12:00:00Z", // Fri  4 Dec 07:00 EST
-    fp3_start:           "2026-12-05T09:30:00Z", // Sat  5 Dec 04:30 EST
-    qualifying_deadline: "2026-12-05T13:00:00Z", // Sat  5 Dec 08:00 EST — predictions lock
-    race_start:          "2026-12-06T12:00:00Z", // Sun  6 Dec 07:00 EST
+    fp1_start:           "2026-12-04T09:30:00Z", // Fri  4 Dec 03:30 CST
+    fp2_start:           "2026-12-04T13:00:00Z", // Fri  4 Dec 07:00 CST
+    fp3_start:           "2026-12-05T10:30:00Z", // Sat  5 Dec 04:30 CST
+    qualifying_deadline: "2026-12-05T14:00:00Z", // Sat  5 Dec 08:00 CST — predictions lock
+    race_start:          "2026-12-06T13:00:00Z", // Sun  6 Dec 07:00 CST
   },
 ];
 

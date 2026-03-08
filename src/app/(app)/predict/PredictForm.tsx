@@ -12,8 +12,10 @@ interface PredictFormProps {
   raceWeekend: RaceWeekend;
   existing: Prediction | null;
   isLocked: boolean;
-  /** ISO string — if set and in the future, predictions aren't open yet */
+  /** ISO string of when predictions open — shown to the user */
   predictionsOpenAt: string | null;
+  /** Server-computed gate: true if predictions aren't open yet */
+  notOpenYet: boolean;
 }
 
 interface FormState {
@@ -39,8 +41,7 @@ function FieldCard({ label, description, children }: { label: string; descriptio
   );
 }
 
-export default function PredictForm({ raceWeekend, existing, isLocked, predictionsOpenAt }: PredictFormProps) {
-  const notOpenYet = !!predictionsOpenAt && new Date() < new Date(predictionsOpenAt);
+export default function PredictForm({ raceWeekend, existing, isLocked, predictionsOpenAt, notOpenYet }: PredictFormProps) {
   const [form, setForm] = useState<FormState>({
     pole_position:    existing?.pole_position    ?? "",
     top3_p1:          existing?.top3_p1          ?? "",
