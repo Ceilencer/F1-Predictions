@@ -387,46 +387,68 @@ function ScoringSection({
     );
   }
 
-  function toggle(
+  function setScore(
     scoreId: string,
     field: "surprise_correct" | "flop_correct" | "crazy_correct",
-    current: boolean | null
+    value: boolean | null
   ) {
-    // Cycle: null → true → false → null
-    const next = current === null ? true : current === true ? false : null;
     startTransition(async () => {
-      const res = await updateSubjectiveScore({ scoreId, field, value: next });
+      const res = await updateSubjectiveScore({ scoreId, field, value });
       if (res.error) {
         setMsg({ text: res.error, error: true });
       } else {
         setScores((prev) =>
-          prev.map((s) => (s.id === scoreId ? { ...s, [field]: next } : s))
+          prev.map((s) => (s.id === scoreId ? { ...s, [field]: value } : s))
         );
       }
     });
   }
 
-  function ToggleBtn({
+  function ScoreBtns({
+    scoreId,
+    field,
     value,
-    onClick,
   }: {
+    scoreId: string;
+    field: "surprise_correct" | "flop_correct" | "crazy_correct";
     value: boolean | null;
-    onClick: () => void;
   }) {
     return (
-      <button
-        onClick={onClick}
-        disabled={pending}
-        className={`min-w-[36px] h-9 px-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-60 ${
-          value === true
-            ? "bg-green-500/20 text-green-400 border border-green-500/30"
-            : value === false
-            ? "bg-red-500/10 text-red-400 border border-red-500/20"
-            : "bg-white/5 text-muted border border-white/10"
-        }`}
-      >
-        {value === true ? "✓" : value === false ? "✗" : "—"}
-      </button>
+      <div className="flex gap-1 mt-1">
+        <button
+          onClick={() => setScore(scoreId, field, true)}
+          disabled={pending}
+          className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 ${
+            value === true
+              ? "bg-green-500/30 text-green-300 border border-green-500/40"
+              : "bg-white/5 text-muted border border-white/10 hover:bg-green-500/10 hover:text-green-400"
+          }`}
+        >
+          ✓
+        </button>
+        <button
+          onClick={() => setScore(scoreId, field, false)}
+          disabled={pending}
+          className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 ${
+            value === false
+              ? "bg-red-500/20 text-red-300 border border-red-500/30"
+              : "bg-white/5 text-muted border border-white/10 hover:bg-red-500/10 hover:text-red-400"
+          }`}
+        >
+          ✗
+        </button>
+        <button
+          onClick={() => setScore(scoreId, field, null)}
+          disabled={pending}
+          className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 ${
+            value === null
+              ? "bg-white/15 text-white border border-white/20"
+              : "bg-white/5 text-muted border border-white/10 hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          ?
+        </button>
+      </div>
     );
   }
 
@@ -434,7 +456,7 @@ function ScoringSection({
     <div>
       <SectionTitle>Score subjective categories</SectionTitle>
       <p className="text-xs text-muted mb-4">
-        These categories are judged manually. Toggle each user's answer between Correct (✓), Incorrect (✗), or Not judged (—).
+        These categories are judged manually. Use ✓ / ✗ / ? to mark each player's answer as Correct, Incorrect, or Unset.
         Scores update automatically.
       </p>
 
@@ -484,12 +506,7 @@ function ScoringSection({
                           <div className="flex flex-col gap-1">
                             <span className="font-mono text-xs text-muted">{pred.biggest_surprise}</span>
                             {score ? (
-                              <ToggleBtn
-                                value={score.surprise_correct}
-                                onClick={() =>
-                                  toggle(score.id, "surprise_correct", score.surprise_correct)
-                                }
-                              />
+                              <ScoreBtns scoreId={score.id} field="surprise_correct" value={score.surprise_correct} />
                             ) : (
                               <span className="text-xs text-muted">No score row</span>
                             )}
@@ -500,12 +517,7 @@ function ScoringSection({
                           <div className="flex flex-col gap-1">
                             <span className="font-mono text-xs text-muted">{pred.biggest_flop}</span>
                             {score ? (
-                              <ToggleBtn
-                                value={score.flop_correct}
-                                onClick={() =>
-                                  toggle(score.id, "flop_correct", score.flop_correct)
-                                }
-                              />
+                              <ScoreBtns scoreId={score.id} field="flop_correct" value={score.flop_correct} />
                             ) : (
                               <span className="text-xs text-muted">No score row</span>
                             )}
@@ -518,12 +530,7 @@ function ScoringSection({
                               &ldquo;{pred.crazy_prediction}&rdquo;
                             </span>
                             {score ? (
-                              <ToggleBtn
-                                value={score.crazy_correct}
-                                onClick={() =>
-                                  toggle(score.id, "crazy_correct", score.crazy_correct)
-                                }
-                              />
+                              <ScoreBtns scoreId={score.id} field="crazy_correct" value={score.crazy_correct} />
                             ) : (
                               <span className="text-xs text-muted">No score row</span>
                             )}

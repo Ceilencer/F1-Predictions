@@ -23,7 +23,7 @@ interface Props {
 
 function asResults(json: Json | null | undefined): ResultEntry[] {
   if (!json || !Array.isArray(json)) return [];
-  return json as ResultEntry[];
+  return json as unknown as ResultEntry[];
 }
 
 function fmtTime(iso: string | null | undefined): string {
@@ -59,58 +59,35 @@ function Cell({ correct, pred, actual }: { correct: boolean | null; pred: string
   );
 }
 
-function ToggleBtn({
-  value,
-  pred,
-  onSet,
-  pending,
+function ScoreBtn({
+  active,
+  onClick,
+  disabled,
+  variant,
+  children,
 }: {
-  value: boolean | null;
-  pred: string;
-  onSet: (v: boolean | null) => void;
-  pending: boolean;
+  active: boolean;
+  onClick: () => void;
+  disabled: boolean;
+  variant: "yes" | "no" | "unset";
+  children: React.ReactNode;
 }) {
+  const base = "px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 border";
+  const styles = {
+    yes: active
+      ? "bg-green-500/25 text-green-400 border-green-500/50"
+      : "bg-white/5 text-muted border-white/10 hover:bg-green-500/15 hover:text-green-400 hover:border-green-500/30",
+    no: active
+      ? "bg-red-500/20 text-red-400 border-red-500/40"
+      : "bg-white/5 text-muted border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30",
+    unset: active
+      ? "bg-white/15 text-white border-white/30"
+      : "bg-white/5 text-muted border-white/10 hover:bg-white/10 hover:text-white hover:border-white/30",
+  };
   return (
-    <div className="flex flex-col gap-1 items-start">
-      <span className="font-mono text-xs text-muted truncate max-w-[80px]" title={pred}>
-        {pred}
-      </span>
-      <div className="flex gap-1">
-        <button
-          onClick={() => onSet(true)}
-          disabled={pending}
-          className={`h-6 px-2 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
-            value === true
-              ? "bg-green-500/30 text-green-400 border border-green-500/50"
-              : "bg-white/5 text-muted border border-white/10 hover:border-green-500/30 hover:text-green-400"
-          }`}
-        >
-          Yes
-        </button>
-        <button
-          onClick={() => onSet(false)}
-          disabled={pending}
-          className={`h-6 px-2 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
-            value === false
-              ? "bg-red-500/20 text-red-400 border border-red-500/40"
-              : "bg-white/5 text-muted border border-white/10 hover:border-red-500/30 hover:text-red-400"
-          }`}
-        >
-          No
-        </button>
-        <button
-          onClick={() => onSet(null)}
-          disabled={pending}
-          className={`h-6 px-2 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
-            value === null
-              ? "bg-white/15 text-white border border-white/30"
-              : "bg-white/5 text-muted border border-white/10 hover:border-white/30 hover:text-white"
-          }`}
-        >
-          ?
-        </button>
-      </div>
-    </div>
+    <button onClick={onClick} disabled={disabled} className={`${base} ${styles[variant]}`}>
+      {children}
+    </button>
   );
 }
 
@@ -190,13 +167,14 @@ export default function ResultsClient({
             sprint_qualifying: null,
             created_at: new Date().toISOString(),
           }),
-          qualifying: res.qualifying ?? prev?.qualifying ?? null,
+          qualifying: (res.qualifying ?? prev?.qualifying ?? null) as Json,
           // Only update race/sprint if the full sync returned them
-          race: !res.partialSync ? (res.race ?? prev?.race ?? null) : (prev?.race ?? null),
-          sprint_race:
+          race: (!res.partialSync ? (res.race ?? prev?.race ?? null) : (prev?.race ?? null)) as Json,
+          sprint_race: (
             !res.partialSync && res.sprintRace && res.sprintRace.length > 0
               ? res.sprintRace
-              : prev?.sprint_race ?? null,
+              : prev?.sprint_race ?? null
+          ) as Json,
           last_synced_at: new Date().toISOString(),
         }));
       }
@@ -340,8 +318,9 @@ export default function ResultsClient({
             </p>
           )}
 
+          {/* Auto-scored table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
+            <table className="w-full text-sm min-w-[500px]">
               <thead>
                 <tr className="text-xs text-muted uppercase tracking-widest border-b border-white/5">
                   <th className="text-left pb-3 pr-4 font-semibold">Player</th>
@@ -349,9 +328,6 @@ export default function ResultsClient({
                   <th className="text-left pb-3 pr-3 font-semibold">P1</th>
                   <th className="text-left pb-3 pr-3 font-semibold">P2</th>
                   <th className="text-left pb-3 pr-3 font-semibold">P3</th>
-                  <th className="text-left pb-3 pr-3 font-semibold">Surprise</th>
-                  <th className="text-left pb-3 pr-3 font-semibold">Flop</th>
-                  <th className="text-left pb-3 pr-3 font-semibold">Wildcard</th>
                   <th className="text-left pb-3 pr-3 font-semibold">P{raceWeekend.p_what_position}</th>
                   <th className="text-right pb-3 font-semibold">Pts</th>
                 </tr>
@@ -360,109 +336,26 @@ export default function ResultsClient({
                 {initialPredictions.map((pred) => {
                   const score = getScore(pred.user_id);
                   const name = profileMap[pred.user_id] ?? "Unknown";
-
                   return (
                     <tr key={pred.user_id}>
-                      <td className="py-3 pr-4 text-white font-semibold whitespace-nowrap">
-                        {name}
-                      </td>
-
-                      {/* Auto-scored: Pole */}
+                      <td className="py-3 pr-4 text-white font-semibold whitespace-nowrap">{name}</td>
                       <td className="py-3 pr-3">
-                        <Cell
-                          correct={score?.pole_correct ?? null}
-                          pred={pred.pole_position}
-                          actual={poleSitter}
-                        />
+                        <Cell correct={score?.pole_correct ?? null} pred={pred.pole_position} actual={poleSitter} />
                       </td>
-
-                      {/* Auto-scored: P1 */}
                       <td className="py-3 pr-3">
-                        <Cell
-                          correct={score?.top3_p1_correct ?? null}
-                          pred={pred.top3_p1}
-                          actual={p1}
-                        />
+                        <Cell correct={score?.top3_p1_correct ?? null} pred={pred.top3_p1} actual={p1} />
                       </td>
-
-                      {/* Auto-scored: P2 */}
                       <td className="py-3 pr-3">
-                        <Cell
-                          correct={score?.top3_p2_correct ?? null}
-                          pred={pred.top3_p2}
-                          actual={p2}
-                        />
+                        <Cell correct={score?.top3_p2_correct ?? null} pred={pred.top3_p2} actual={p2} />
                       </td>
-
-                      {/* Auto-scored: P3 */}
                       <td className="py-3 pr-3">
-                        <Cell
-                          correct={score?.top3_p3_correct ?? null}
-                          pred={pred.top3_p3}
-                          actual={p3}
-                        />
+                        <Cell correct={score?.top3_p3_correct ?? null} pred={pred.top3_p3} actual={p3} />
                       </td>
-
-                      {/* Manual: Surprise */}
                       <td className="py-3 pr-3">
-                        {score ? (
-                          <ToggleBtn
-                            value={score.surprise_correct}
-                            pred={pred.biggest_surprise}
-                            pending={pending}
-                            onSet={(v) => setSubjective(score.id, "surprise_correct", v)}
-                          />
-                        ) : (
-                          <span className="font-mono text-xs text-muted">{pred.biggest_surprise}</span>
-                        )}
+                        <Cell correct={score?.p_what_correct ?? null} pred={pred.p_what_driver} actual={pWhatActual} />
                       </td>
-
-                      {/* Manual: Flop */}
-                      <td className="py-3 pr-3">
-                        {score ? (
-                          <ToggleBtn
-                            value={score.flop_correct}
-                            pred={pred.biggest_flop}
-                            pending={pending}
-                            onSet={(v) => setSubjective(score.id, "flop_correct", v)}
-                          />
-                        ) : (
-                          <span className="font-mono text-xs text-muted">{pred.biggest_flop}</span>
-                        )}
-                      </td>
-
-                      {/* Manual: Wildcard */}
-                      <td className="py-3 pr-3">
-                        {score ? (
-                          <ToggleBtn
-                            value={score.crazy_correct}
-                            pred={`"${pred.crazy_prediction}"`}
-                            pending={pending}
-                            onSet={(v) => setSubjective(score.id, "crazy_correct", v)}
-                          />
-                        ) : (
-                          <span className="text-xs text-muted italic max-w-[100px] truncate block">
-                            &ldquo;{pred.crazy_prediction}&rdquo;
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Auto-scored: P What */}
-                      <td className="py-3 pr-3">
-                        <Cell
-                          correct={score?.p_what_correct ?? null}
-                          pred={pred.p_what_driver}
-                          actual={pWhatActual}
-                        />
-                      </td>
-
-                      {/* Total */}
                       <td className="py-3 text-right">
-                        <span
-                          className={`text-sm font-bold ${
-                            score ? "text-white" : "text-muted"
-                          }`}
-                        >
+                        <span className={`text-sm font-bold ${score ? "text-white" : "text-muted"}`}>
                           {score?.total_points ?? "—"}
                         </span>
                       </td>
@@ -473,11 +366,47 @@ export default function ResultsClient({
             </table>
           </div>
 
+          {/* Manual scoring panels */}
+          {([
+            { label: "Biggest Surprise", field: "surprise_correct" as const, getPred: (p: typeof initialPredictions[0]) => p.biggest_surprise },
+            { label: "Biggest Flop",     field: "flop_correct" as const,     getPred: (p: typeof initialPredictions[0]) => p.biggest_flop },
+            { label: "Wildcard",         field: "crazy_correct" as const,    getPred: (p: typeof initialPredictions[0]) => p.crazy_prediction },
+          ]).map(({ label, field, getPred }) => (
+            <div key={field} className="mt-4 pt-4 border-t border-white/5">
+              <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">{label}</p>
+              <div className="space-y-2">
+                {initialPredictions.map((pred) => {
+                  const score = getScore(pred.user_id);
+                  const name = profileMap[pred.user_id] ?? "Unknown";
+                  const prediction = getPred(pred);
+                  const value = score ? score[field] : null;
+                  return (
+                    <div key={pred.user_id} className="flex items-center justify-between gap-4 bg-background/40 rounded-lg px-4 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white">{name}</p>
+                        <p className="text-xs text-muted truncate">{field === "crazy_correct" ? `"${prediction}"` : prediction}</p>
+                      </div>
+                      {score ? (
+                        <div className="flex gap-2 shrink-0">
+                          <ScoreBtn active={value === true}  onClick={() => setSubjective(score.id, field, true)}  disabled={pending} variant="yes">✓</ScoreBtn>
+                          <ScoreBtn active={value === false} onClick={() => setSubjective(score.id, field, false)} disabled={pending} variant="no">✗</ScoreBtn>
+                          <ScoreBtn active={value === null}  onClick={() => setSubjective(score.id, field, null)}  disabled={pending} variant="unset">?</ScoreBtn>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted shrink-0">Sync first</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
           {initialPredictions.length > 0 && !hasQualifying && (
             <p className="text-xs text-muted mt-4 text-center">
               Sync after qualifying finishes to score pole position, then again after the race for
               P1–P3 and P{raceWeekend.p_what_position}. You can award Surprise / Flop / Wildcard
-              points at any time.
+              points at any time after syncing.
             </p>
           )}
         </div>

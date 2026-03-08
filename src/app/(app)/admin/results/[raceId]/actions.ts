@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import type { Json } from "@/lib/supabase/database.types";
 
 // ── Jolpica Ergast API types ───────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ export async function syncRaceResults(raceWeekendId: string): Promise<{
     if (!storedQual || !Array.isArray(storedQual) || storedQual.length === 0) {
       return { error: "No qualifying results found yet. Try again after qualifying finishes." };
     }
-    qualifying = storedQual as ResultEntry[];
+    qualifying = storedQual as unknown as ResultEntry[];
   } else {
     qualifying = toEntries(rawQual);
   }
@@ -163,16 +164,16 @@ export async function syncRaceResults(raceWeekendId: string): Promise<{
 
   // Store raw results — only update race/sprint fields when we actually have data,
   // so a qualifying-only sync doesn't wipe previously stored race results.
-  const upsertPayload: Record<string, unknown> = {
+  const upsertPayload = {
     race_weekend_id: raceWeekendId,
-    qualifying,
+    qualifying: qualifying as unknown as Json,
     last_synced_at: new Date().toISOString(),
+    ...(!partialSync && {
+      race: race as unknown as Json,
+      sprint_qualifying: null,
+      sprint_race: (sprintRace.length > 0 ? sprintRace : null) as unknown as Json,
+    }),
   };
-  if (!partialSync) {
-    upsertPayload.race = race;
-    upsertPayload.sprint_qualifying = null;
-    upsertPayload.sprint_race = sprintRace.length > 0 ? sprintRace : null;
-  }
 
   const { error: storeError } = await adminDb
     .from("race_results")

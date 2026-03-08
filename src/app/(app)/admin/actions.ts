@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { CALENDAR_2026, SEASON } from "@/config/calendar";
 
@@ -161,10 +161,12 @@ export async function updateSubjectiveScore(data: {
   field: "surprise_correct" | "flop_correct" | "crazy_correct";
   value: boolean | null;
 }): Promise<{ error?: string; success?: true }> {
-  const { error: authError, supabase } = await requireAdmin();
-  if (authError || !supabase) return { error: authError ?? "Unknown error." };
+  const { error: authError } = await requireAdmin();
+  if (authError) return { error: authError };
 
-  const { error } = await supabase
+  // Use service-role client so RLS doesn't block the update.
+  const adminDb = createAdminClient();
+  const { error } = await adminDb
     .from("scores")
     .update({ [data.field]: data.value })
     .eq("id", data.scoreId);

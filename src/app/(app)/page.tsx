@@ -35,26 +35,23 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const now = new Date().toISOString();
-
-  // Upcoming/active race: earliest race whose start time hasn't passed yet.
-  // Uses race_start so the race shows as active through qualifying (locked) and
-  // up until the race itself begins, not just until the qualifying deadline.
+  // Current race: first race whose results haven't been synced yet.
+  // Keeps AUS GP as current until results are published, same logic as predict page.
   const { data: upcoming } = await supabase
     .from("race_weekends")
     .select("*")
-    .gt("race_start", now)
+    .eq("results_synced", false)
     .order("race_start", { ascending: true })
     .limit(1)
     .maybeSingle();
 
-  // If no upcoming race (race_start in future), fall back to the most recently started race
+  // If all races are synced (end of season), fall back to the most recent one
   const { data: currentRace } = upcoming
     ? { data: upcoming }
     : await supabase
         .from("race_weekends")
         .select("*")
-        .lte("race_start", now)
+        .eq("results_synced", true)
         .order("race_start", { ascending: false })
         .limit(1)
         .maybeSingle();

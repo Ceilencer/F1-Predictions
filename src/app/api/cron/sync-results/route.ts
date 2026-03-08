@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import type { Json } from "@/lib/supabase/database.types";
 
 // ── Jolpica API types ──────────────────────────────────────────────────────────
 
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
 
   for (const rw of candidates) {
     const qualDeadline = new Date(rw.qualifying_deadline);
-    const raceStart = new Date(rw.race_start);
+    const raceStart = new Date(rw.race_start ?? "");
 
     const qualSyncAfter = new Date(qualDeadline.getTime() + 60 * 60 * 1000);       // +1h
     const raceSyncAfter = new Date(raceStart.getTime() + 2.5 * 60 * 60 * 1000);    // +2.5h
@@ -141,16 +142,16 @@ export async function GET(request: NextRequest) {
       const partialSync = race.length === 0;
 
       // Store results — only write race/sprint fields when we have them
-      const upsertPayload: Record<string, unknown> = {
+      const upsertPayload = {
         race_weekend_id: rw.id,
-        qualifying,
+        qualifying: qualifying as unknown as Json,
         last_synced_at: now.toISOString(),
+        ...(!partialSync && {
+          race: race as unknown as Json,
+          sprint_qualifying: null,
+          sprint_race: (sprintRace.length > 0 ? sprintRace : null) as unknown as Json,
+        }),
       };
-      if (!partialSync) {
-        upsertPayload.race = race;
-        upsertPayload.sprint_qualifying = null;
-        upsertPayload.sprint_race = sprintRace.length > 0 ? sprintRace : null;
-      }
 
       const { error: storeError } = await adminDb
         .from("race_results")

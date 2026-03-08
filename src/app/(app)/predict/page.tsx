@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PredictForm from "./PredictForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function PredictPage() {
   const supabase = await createClient();
 
@@ -48,7 +50,7 @@ export default async function PredictPage() {
 
   // Predictions open 12 hours after the previous race starts.
   // If there's no previous race (season opener), predictions open immediately.
-  const predictionsOpenAt = previousRace
+  const predictionsOpenAt = previousRace?.race_start
     ? new Date(new Date(previousRace.race_start).getTime() + 12 * 60 * 60 * 1000).toISOString()
     : null;
 
