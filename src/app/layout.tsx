@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "F1 Predictions",
   description: "Family Formula 1 race weekend predictions",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
