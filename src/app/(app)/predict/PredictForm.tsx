@@ -27,6 +27,8 @@ interface FormState {
   biggest_flop: string;
   crazy_prediction: string;
   p_what_driver: string;
+  sprint_pole: string;
+  sprint_winner: string;
 }
 
 function FieldCard({ label, description, children }: { label: string; description: string; children: React.ReactNode }) {
@@ -51,6 +53,8 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
     biggest_flop:     existing?.biggest_flop     ?? "",
     crazy_prediction: existing?.crazy_prediction ?? "",
     p_what_driver:    existing?.p_what_driver    ?? "",
+    sprint_pole:      existing?.sprint_pole      ?? "",
+    sprint_winner:    existing?.sprint_winner    ?? "",
   });
 
   const [isPending, startTransition] = useTransition();
@@ -74,6 +78,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
     const required: (keyof FormState)[] = [
       "pole_position", "top3_p1", "top3_p2", "top3_p3",
       "biggest_surprise", "biggest_flop", "crazy_prediction", "p_what_driver",
+      ...(raceWeekend.is_sprint_weekend ? ["sprint_pole", "sprint_winner"] as (keyof FormState)[] : []),
     ];
     for (const k of required) {
       if (!form[k].trim()) {
@@ -85,6 +90,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
     startTransition(async () => {
       const result = await submitPredictions({
         raceWeekendId: raceWeekend.id,
+        isSprint: raceWeekend.is_sprint_weekend,
         ...form,
       });
       if (result.error) {
@@ -158,14 +164,43 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
         </div>
       )}
 
+      {/* Sprint weekend badge */}
+      {raceWeekend.is_sprint_weekend && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+          <span className="text-yellow-400 text-sm font-semibold">⚡ Sprint Weekend</span>
+          <span className="text-xs text-muted">Extra predictions required for the sprint race.</span>
+        </div>
+      )}
+
       {/* Pole Position */}
-      <FieldCard label="Pole Position" description="Which driver will qualify P1?">
+      <FieldCard label="Pole Position" description="Which driver will qualify P1 for the main race?">
         <DriverPickerModal
           value={form.pole_position}
           onChange={set("pole_position")}
           disabled={locked}
         />
       </FieldCard>
+
+      {/* Sprint fields — only on sprint weekends */}
+      {raceWeekend.is_sprint_weekend && (
+        <>
+          <FieldCard label="Sprint Pole" description="Which driver will take P1 in sprint qualifying?">
+            <DriverPickerModal
+              value={form.sprint_pole}
+              onChange={set("sprint_pole")}
+              disabled={locked}
+            />
+          </FieldCard>
+
+          <FieldCard label="Sprint Winner" description="Which driver will win the sprint race?">
+            <DriverPickerModal
+              value={form.sprint_winner}
+              onChange={set("sprint_winner")}
+              disabled={locked}
+            />
+          </FieldCard>
+        </>
+      )}
 
       {/* Race Winner */}
       <FieldCard label="Race Winner — P1" description="Who crosses the line first?">

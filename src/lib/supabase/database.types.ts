@@ -130,6 +130,8 @@ export interface Database {
           biggest_flop: string;
           crazy_prediction: string;
           p_what_driver: string;
+          sprint_pole: string | null;
+          sprint_winner: string | null;
           submitted_at: string;
         };
         Insert: {
@@ -144,6 +146,8 @@ export interface Database {
           biggest_flop: string;
           crazy_prediction: string;
           p_what_driver: string;
+          sprint_pole?: string | null;
+          sprint_winner?: string | null;
           submitted_at?: string;
         };
         Update: {
@@ -158,6 +162,8 @@ export interface Database {
           biggest_flop?: string;
           crazy_prediction?: string;
           p_what_driver?: string;
+          sprint_pole?: string | null;
+          sprint_winner?: string | null;
           submitted_at?: string;
         };
         Relationships: [];
@@ -208,6 +214,8 @@ export interface Database {
           flop_correct: boolean | null;
           crazy_correct: boolean | null;
           p_what_correct: boolean;
+          sprint_pole_correct: boolean | null;
+          sprint_winner_correct: boolean | null;
           total_points: number;
         };
         Insert: {
@@ -222,6 +230,8 @@ export interface Database {
           flop_correct?: boolean | null;
           crazy_correct?: boolean | null;
           p_what_correct?: boolean;
+          sprint_pole_correct?: boolean | null;
+          sprint_winner_correct?: boolean | null;
           total_points?: number;
         };
         Update: {
@@ -236,6 +246,8 @@ export interface Database {
           flop_correct?: boolean | null;
           crazy_correct?: boolean | null;
           p_what_correct?: boolean;
+          sprint_pole_correct?: boolean | null;
+          sprint_winner_correct?: boolean | null;
           total_points?: number;
         };
         Relationships: [];

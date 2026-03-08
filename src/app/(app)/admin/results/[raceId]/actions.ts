@@ -13,6 +13,7 @@ interface JolpicaDriver {
 }
 interface JolpicaResult {
   position: string;
+  grid?: string;
   Driver: JolpicaDriver;
 }
 interface JolpicaRace {
@@ -88,6 +89,8 @@ export async function syncRaceResults(raceWeekendId: string): Promise<{
     flop_correct: boolean | null;
     crazy_correct: boolean | null;
     p_what_correct: boolean;
+    sprint_pole_correct: boolean | null;
+    sprint_winner_correct: boolean | null;
     total_points: number;
   }[];
 }> {
@@ -154,10 +157,16 @@ export async function syncRaceResults(raceWeekendId: string): Promise<{
   }
 
   let sprintRace: ResultEntry[] = [];
+  let sprintPoleCode = "";
+  let sprintWinnerCode = "";
   if (sprintRes.ok) {
     const sprintData: JolpicaResponse = await sprintRes.json();
     const rawSprint = sprintData.MRData.RaceTable.Races[0]?.SprintResults ?? [];
     sprintRace = toEntries(rawSprint);
+    // Sprint pole = driver who started from grid position 1 (set by sprint qualifying)
+    sprintPoleCode = rawSprint.find((r) => r.grid === "1")?.Driver.code ?? "";
+    // Sprint winner = driver who finished P1
+    sprintWinnerCode = sprintRace.find((r) => r.pos === 1)?.code ?? "";
   }
 
   const partialSync = race.length === 0;
@@ -243,6 +252,8 @@ export async function syncRaceResults(raceWeekendId: string): Promise<{
       );
     }
 
+    const isSprint = raceWeekend.is_sprint_weekend;
+
     await adminDb.from("scores").upsert(
       predictions.map((pred) => {
         const ex = existingMap[pred.user_id];
@@ -256,6 +267,15 @@ export async function syncRaceResults(raceWeekendId: string): Promise<{
           top3_p2_correct: partialSync ? (ex?.top3_p2_correct ?? false) : !!p2 && pred.top3_p2 === p2,
           top3_p3_correct: partialSync ? (ex?.top3_p3_correct ?? false) : !!p3 && pred.top3_p3 === p3,
           p_what_correct: partialSync ? (ex?.p_what_correct ?? false) : pWhatWinners.has(pred.user_id),
+          // Sprint scores — only relevant on sprint weekends; preserve on partial sync
+          sprint_pole_correct: !isSprint ? null
+            : partialSync ? (ex?.sprint_pole_correct ?? null)
+            : sprintPoleCode ? (pred.sprint_pole === sprintPoleCode)
+            : null,
+          sprint_winner_correct: !isSprint ? null
+            : partialSync ? (ex?.sprint_winner_correct ?? null)
+            : sprintWinnerCode ? (pred.sprint_winner === sprintWinnerCode)
+            : null,
           // Preserve manually-set subjective scores — never overwrite with auto-sync
           surprise_correct: ex?.surprise_correct ?? null,
           flop_correct: ex?.flop_correct ?? null,

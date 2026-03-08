@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 interface PredictionPayload {
   raceWeekendId: string;
+  isSprint: boolean;
   pole_position: string;
   top3_p1: string;
   top3_p2: string;
@@ -13,6 +14,8 @@ interface PredictionPayload {
   biggest_flop: string;
   crazy_prediction: string;
   p_what_driver: string;
+  sprint_pole: string;
+  sprint_winner: string;
 }
 
 export async function submitPredictions(
@@ -49,6 +52,8 @@ export async function submitPredictions(
       biggest_flop: payload.biggest_flop,
       crazy_prediction: payload.crazy_prediction,
       p_what_driver: payload.p_what_driver,
+      sprint_pole: payload.isSprint ? payload.sprint_pole : null,
+      sprint_winner: payload.isSprint ? payload.sprint_winner : null,
       submitted_at: new Date().toISOString(),
     },
     { onConflict: "user_id,race_weekend_id" }

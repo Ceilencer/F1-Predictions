@@ -11,6 +11,7 @@ interface JolpicaDriver {
 }
 interface JolpicaResult {
   position: string;
+  grid?: string;
   Driver: JolpicaDriver;
 }
 interface JolpicaRace {
@@ -134,9 +135,14 @@ export async function GET(request: NextRequest) {
       }
 
       let sprintRace: ResultEntry[] = [];
+      let sprintPoleCode = "";
+      let sprintWinnerCode = "";
       if (sprintRes.ok) {
         const sprintData: JolpicaResponse = await sprintRes.json();
-        sprintRace = toEntries(sprintData.MRData.RaceTable.Races[0]?.SprintResults ?? []);
+        const rawSprint = sprintData.MRData.RaceTable.Races[0]?.SprintResults ?? [];
+        sprintRace = toEntries(rawSprint);
+        sprintPoleCode = rawSprint.find((r) => r.grid === "1")?.Driver.code ?? "";
+        sprintWinnerCode = sprintRace.find((r) => r.pos === 1)?.code ?? "";
       }
 
       const partialSync = race.length === 0;
@@ -214,6 +220,8 @@ export async function GET(request: NextRequest) {
           );
         }
 
+        const isSprint = rw.is_sprint_weekend;
+
         await adminDb.from("scores").upsert(
           predictions.map((pred) => {
             const ex = existingMap[pred.user_id];
@@ -225,6 +233,14 @@ export async function GET(request: NextRequest) {
               top3_p2_correct: partialSync ? (ex?.top3_p2_correct ?? false) : !!p2 && pred.top3_p2 === p2,
               top3_p3_correct: partialSync ? (ex?.top3_p3_correct ?? false) : !!p3 && pred.top3_p3 === p3,
               p_what_correct: partialSync ? (ex?.p_what_correct ?? false) : pWhatWinners.has(pred.user_id),
+              sprint_pole_correct: !isSprint ? null
+                : partialSync ? (ex?.sprint_pole_correct ?? null)
+                : sprintPoleCode ? (pred.sprint_pole === sprintPoleCode)
+                : null,
+              sprint_winner_correct: !isSprint ? null
+                : partialSync ? (ex?.sprint_winner_correct ?? null)
+                : sprintWinnerCode ? (pred.sprint_winner === sprintWinnerCode)
+                : null,
               surprise_correct: ex?.surprise_correct ?? null,
               flop_correct: ex?.flop_correct ?? null,
               crazy_correct: ex?.crazy_correct ?? null,
