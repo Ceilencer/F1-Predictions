@@ -108,6 +108,7 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
               displayName={profileMap[ownPrediction.user_id] ?? "You"}
               pWhatPosition={raceWeekend.p_what_position}
               isOwn
+              isSprint={raceWeekend.is_sprint_weekend}
               pole_position={ownPrediction.pole_position}
               top3_p1={ownPrediction.top3_p1}
               top3_p2={ownPrediction.top3_p2}
@@ -116,6 +117,8 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
               biggest_flop={ownPrediction.biggest_flop}
               p_what_driver={ownPrediction.p_what_driver}
               crazy_prediction={ownPrediction.crazy_prediction}
+              sprint_pole={ownPrediction.sprint_pole}
+              sprint_winner={ownPrediction.sprint_winner}
             />
           </div>
           <div className="bg-surface rounded-2xl border border-white/5 p-6 text-center">
@@ -130,6 +133,7 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
               displayName={profileMap[prediction.user_id] ?? "Unknown"}
               pWhatPosition={raceWeekend.p_what_position}
               isOwn={prediction.user_id === user.id}
+              isSprint={raceWeekend.is_sprint_weekend}
               pole_position={prediction.pole_position}
               top3_p1={prediction.top3_p1}
               top3_p2={prediction.top3_p2}
@@ -138,6 +142,8 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
               biggest_flop={prediction.biggest_flop}
               p_what_driver={prediction.p_what_driver}
               crazy_prediction={prediction.crazy_prediction}
+              sprint_pole={prediction.sprint_pole}
+              sprint_winner={prediction.sprint_winner}
             />
           ))}
         </div>

@@ -5,6 +5,7 @@ interface PredictionCardProps {
   displayName: string;
   pWhatPosition: number;
   isOwn?: boolean;
+  isSprint?: boolean;
   pole_position: string;
   top3_p1: string;
   top3_p2: string;
@@ -13,6 +14,8 @@ interface PredictionCardProps {
   biggest_flop: string;
   p_what_driver: string;
   crazy_prediction: string;
+  sprint_pole?: string | null;
+  sprint_winner?: string | null;
 }
 
 function PickRow({ label, value }: { label: string; value: string }) {
@@ -72,6 +75,7 @@ export default function PredictionCard({
   displayName,
   pWhatPosition,
   isOwn = false,
+  isSprint = false,
   pole_position,
   top3_p1,
   top3_p2,
@@ -80,6 +84,8 @@ export default function PredictionCard({
   biggest_flop,
   p_what_driver,
   crazy_prediction,
+  sprint_pole,
+  sprint_winner,
 }: PredictionCardProps) {
   const initials = displayName
     .split(" ")
@@ -104,6 +110,12 @@ export default function PredictionCard({
       {/* Picks */}
       <div className="px-4 py-2">
         <PickRow label="Pole"    value={pole_position}    />
+        {isSprint && (
+          <>
+            <PickRow label="Spr Pole"   value={sprint_pole   ?? ""} />
+            <PickRow label="Spr Win"    value={sprint_winner ?? ""} />
+          </>
+        )}
         <PickRow label="P1"      value={top3_p1}          />
         <PickRow label="P2"      value={top3_p2}          />
         <PickRow label="P3"      value={top3_p3}          />
