@@ -81,9 +81,9 @@ export default async function DashboardPage() {
   const canViewPredictions = hasSubmitted || isLocked;
 
   // Build profile map from already-fetched profiles
-  const profileMap: Record<string, string> = {};
+  const profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
   for (const p of profiles ?? []) {
-    profileMap[p.id] = p.display_name;
+    profileMap[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url };
   }
 
   // Sort own card first, then others by submitted_at
@@ -229,7 +229,8 @@ export default async function DashboardPage() {
               {sortedPredictions.map((prediction) => (
                 <PredictionCard
                   key={prediction.id}
-                  displayName={profileMap[prediction.user_id] ?? "Unknown"}
+                  displayName={profileMap[prediction.user_id]?.display_name ?? "Unknown"}
+                  avatarUrl={profileMap[prediction.user_id]?.avatar_url}
                   pWhatPosition={currentRace.p_what_position}
                   isOwn={prediction.user_id === user.id}
                   isSprint={currentRace.is_sprint_weekend}

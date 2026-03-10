@@ -3,6 +3,7 @@ import { getDriverByCode, getTeamByShortName } from "@/config/drivers";
 
 interface PredictionCardProps {
   displayName: string;
+  avatarUrl?: string | null;
   pWhatPosition: number;
   isOwn?: boolean;
   isSprint?: boolean;
@@ -73,6 +74,7 @@ function PickRow({ label, value }: { label: string; value: string }) {
 
 export default function PredictionCard({
   displayName,
+  avatarUrl,
   pWhatPosition,
   isOwn = false,
   isSprint = false,
@@ -98,9 +100,15 @@ export default function PredictionCard({
     <div className={`bg-surface rounded-xl overflow-hidden ${isOwn ? "border-2 border-white/40 ring-1 ring-white/10" : "border border-white/5"}`}>
       {/* Card header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-white/[0.02]">
-        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isOwn ? "bg-white/15 border border-white/30" : "bg-accent/20 border border-accent/30"}`}>
-          <span className={`text-xs font-bold ${isOwn ? "text-white" : "text-accent"}`}>{initials}</span>
-        </div>
+        {avatarUrl ? (
+          <div className="relative h-8 w-8 rounded-full overflow-hidden shrink-0">
+            <Image src={avatarUrl} alt={displayName} fill className="object-cover" sizes="32px" />
+          </div>
+        ) : (
+          <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isOwn ? "bg-white/15 border border-white/30" : "bg-accent/20 border border-accent/30"}`}>
+            <span className={`text-xs font-bold ${isOwn ? "text-white" : "text-accent"}`}>{initials}</span>
+          </div>
+        )}
         <div className="flex items-center gap-2 min-w-0">
           <p className="text-sm font-semibold text-white truncate">{displayName}</p>
           {isOwn && <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest shrink-0">You</span>}
@@ -109,13 +117,13 @@ export default function PredictionCard({
 
       {/* Picks */}
       <div className="px-4 py-2">
-        <PickRow label="Pole"    value={pole_position}    />
         {isSprint && (
           <>
-            <PickRow label="Spr Pole"   value={sprint_pole   ?? ""} />
-            <PickRow label="Spr Win"    value={sprint_winner ?? ""} />
+            <PickRow label="Spr Pole" value={sprint_pole   ?? ""} />
+            <PickRow label="Spr Win"  value={sprint_winner ?? ""} />
           </>
         )}
+        <PickRow label="Pole"    value={pole_position}    />
         <PickRow label="P1"      value={top3_p1}          />
         <PickRow label="P2"      value={top3_p2}          />
         <PickRow label="P3"      value={top3_p3}          />

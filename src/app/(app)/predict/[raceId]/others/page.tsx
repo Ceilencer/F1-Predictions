@@ -51,7 +51,7 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
 
   // Fetch all relevant profiles in one query
   const userIds = [...new Set(predictions.map((p) => p.user_id))];
-  const profileMap: Record<string, string> = {};
+  const profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
 
   if (userIds.length > 0) {
     const { data: profiles } = await supabase
@@ -60,7 +60,7 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
       .in("id", userIds);
 
     for (const profile of profiles ?? []) {
-      profileMap[profile.id] = profile.display_name;
+      profileMap[profile.id] = { display_name: profile.display_name, avatar_url: profile.avatar_url };
     }
   }
 
@@ -105,7 +105,8 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <PredictionCard
               key={ownPrediction.id}
-              displayName={profileMap[ownPrediction.user_id] ?? "You"}
+              displayName={profileMap[ownPrediction.user_id]?.display_name ?? "You"}
+              avatarUrl={profileMap[ownPrediction.user_id]?.avatar_url}
               pWhatPosition={raceWeekend.p_what_position}
               isOwn
               isSprint={raceWeekend.is_sprint_weekend}
@@ -130,7 +131,8 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
           {sorted.map((prediction) => (
             <PredictionCard
               key={prediction.id}
-              displayName={profileMap[prediction.user_id] ?? "Unknown"}
+              displayName={profileMap[prediction.user_id]?.display_name ?? "Unknown"}
+              avatarUrl={profileMap[prediction.user_id]?.avatar_url}
               pWhatPosition={raceWeekend.p_what_position}
               isOwn={prediction.user_id === user.id}
               isSprint={raceWeekend.is_sprint_weekend}
