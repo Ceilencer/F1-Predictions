@@ -175,7 +175,7 @@ export const TEAMS: Team[] = [
     name: "Audi F1 Team",
     shortName: "Audi",
     logoPath: "/teams/2026audilogowhite.avif",
-    colour: "#52E252",
+    colour: "#B0B0B0",
     drivers: [
       { name: "Nico Hülkenberg",   code: "HUL", nationality: "German",    number: 27, photoPath: "/drivers/2026audinichul01right.avif" },
       { name: "Gabriel Bortoleto", code: "BOR", nationality: "Brazilian", number: 5,  photoPath: "/drivers/2026audigabbor01right.avif" },

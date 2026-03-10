@@ -232,6 +232,7 @@ export default async function DashboardPage() {
                   displayName={profileMap[prediction.user_id] ?? "Unknown"}
                   pWhatPosition={currentRace.p_what_position}
                   isOwn={prediction.user_id === user.id}
+                  isSprint={currentRace.is_sprint_weekend}
                   pole_position={prediction.pole_position}
                   top3_p1={prediction.top3_p1}
                   top3_p2={prediction.top3_p2}
@@ -240,6 +241,8 @@ export default async function DashboardPage() {
                   biggest_flop={prediction.biggest_flop}
                   p_what_driver={prediction.p_what_driver}
                   crazy_prediction={prediction.crazy_prediction}
+                  sprint_pole={prediction.sprint_pole}
+                  sprint_winner={prediction.sprint_winner}
                 />
               ))}
             </div>
