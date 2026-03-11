@@ -32,35 +32,8 @@ export default async function HistoryPage() {
         </div>
       )}
 
-      {upcoming.length > 0 && (
-        <section className="mb-8">
-          <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">Upcoming</p>
-          <div className="space-y-2">
-            {[...upcoming].reverse().map((r) => (
-              <div
-                key={r.id}
-                className="bg-surface rounded-xl border border-white/5 px-4 py-3 flex items-center justify-between"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-white">{r.race_name}</p>
-                  <p className="text-xs text-muted mt-0.5">
-                    Round {r.round} · {r.season}
-                  </p>
-                </div>
-                <span className="text-xs text-muted">
-                  {new Date(r.qualifying_deadline).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                  })}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       {past.length > 0 && (
-        <section>
+        <section className="mb-8">
           <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">Completed</p>
           <div className="space-y-2">
             {past.map((r) => (
@@ -107,6 +80,33 @@ export default async function HistoryPage() {
                   </svg>
                 </div>
               </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {upcoming.length > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">Upcoming</p>
+          <div className="space-y-2">
+            {[...upcoming].reverse().map((r) => (
+              <div
+                key={r.id}
+                className="bg-surface rounded-xl border border-white/5 px-4 py-3 flex items-center justify-between"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-white">{r.race_name}</p>
+                  <p className="text-xs text-muted mt-0.5">
+                    Round {r.round} · {r.season}
+                  </p>
+                </div>
+                <span className="text-xs text-muted">
+                  {new Date(r.qualifying_deadline).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </span>
+              </div>
             ))}
           </div>
         </section>
