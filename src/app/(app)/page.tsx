@@ -133,13 +133,14 @@ export default async function DashboardPage() {
                 <p className="text-xs text-muted">
                   Predictions lock:{" "}
                   <span className="text-white">
-                    {new Date(currentRace.qualifying_deadline).toLocaleString("en-GB", {
+                    {new Date(currentRace.qualifying_deadline).toLocaleString("en-US", {
+                      timeZone: "America/Chicago",
                       weekday: "short",
                       day: "numeric",
                       month: "short",
                       hour: "2-digit",
                       minute: "2-digit",
-                    })}
+                    })} CDT
                   </span>
                 </p>
                 <Countdown deadline={currentRace.qualifying_deadline} />

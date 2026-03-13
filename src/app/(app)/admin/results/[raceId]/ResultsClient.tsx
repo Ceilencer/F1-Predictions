@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { syncRaceResults, type ResultEntry } from "./actions";
+import { syncRaceResults, type ResultEntry, type SyncType } from "./actions";
 import { updateSubjectiveScore } from "../../actions";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
@@ -37,21 +37,29 @@ function fmtTime(iso: string | null | undefined): string {
   });
 }
 
+/** Derive the sync state from what results are currently stored. */
+function inferSyncType(
+  alreadySynced: boolean,
+  hasQualifying: boolean,
+  hasRace: boolean,
+  hasSprint: boolean
+): SyncType | "not-synced" {
+  if (!alreadySynced) return "not-synced";
+  if (hasRace) return "full";
+  if (hasQualifying && hasSprint) return "sprint+qualifying";
+  if (hasSprint) return "sprint-only";
+  return "qualifying-only";
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────
 
 function Cell({ correct, pred, actual }: { correct: boolean | null; pred: string; actual: string }) {
   if (correct === null) {
-    return (
-      <span className="font-mono text-sm text-muted">{pred}</span>
-    );
+    return <span className="font-mono text-sm text-muted">{pred || "—"}</span>;
   }
   return (
-    <span
-      className={`inline-flex flex-col gap-0.5 ${
-        correct ? "text-green-400" : "text-red-400"
-      }`}
-    >
-      <span className="font-mono text-sm font-semibold">{pred}</span>
+    <span className={`inline-flex flex-col gap-0.5 ${correct ? "text-green-400" : "text-red-400"}`}>
+      <span className="font-mono text-sm font-semibold">{pred || "—"}</span>
       {!correct && actual && (
         <span className="text-xs opacity-60">was {actual}</span>
       )}
@@ -91,7 +99,15 @@ function ScoreBtn({
   );
 }
 
-function ResultsTable({ title, entries, highlight }: { title: string; entries: ResultEntry[]; highlight?: number }) {
+function ResultsTable({
+  title,
+  entries,
+  highlight,
+}: {
+  title: string;
+  entries: ResultEntry[];
+  highlight?: number;
+}) {
   if (entries.length === 0) return null;
   const show = entries.slice(0, 10);
   return (
@@ -132,17 +148,30 @@ export default function ResultsClient({
   const [syncMsg, setSyncMsg] = useState<{ text: string; error?: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const isSprint = raceWeekend.is_sprint_weekend;
+
   const qualifying = asResults(storedResults?.qualifying);
   const race = asResults(storedResults?.race);
   const sprintRace = asResults(storedResults?.sprint_race);
+  const sprintQualifying = asResults(storedResults?.sprint_qualifying);
 
   const poleSitter = qualifying.find((q) => q.pos === 1)?.code ?? "";
   const p1 = race.find((r) => r.pos === 1)?.code ?? "";
   const p2 = race.find((r) => r.pos === 2)?.code ?? "";
   const p3 = race.find((r) => r.pos === 3)?.code ?? "";
   const pWhatActual = race.find((r) => r.pos === raceWeekend.p_what_position)?.code ?? "";
+  const sprintPole = sprintQualifying.find((r) => r.pos === 1)?.code ?? "";
+  const sprintWinner = sprintRace.find((r) => r.pos === 1)?.code ?? "";
 
   const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p.display_name]));
+
+  const hasQualifying = qualifying.length > 0;
+  const hasRace = race.length > 0;
+  const hasSprint = sprintRace.length > 0;
+  const alreadySynced = !!storedResults?.last_synced_at;
+  const hasAnyResults = hasQualifying || hasSprint;
+
+  const syncState = inferSyncType(alreadySynced, hasQualifying, hasRace, hasSprint);
 
   function getScore(userId: string) {
     return scores.find((s) => s.user_id === userId && s.race_weekend_id === raceWeekend.id);
@@ -154,30 +183,42 @@ export default function ResultsClient({
       const res = await syncRaceResults(raceWeekend.id);
       if (res.error) {
         setSyncMsg({ text: res.error, error: true });
-      } else {
-        const msg = res.partialSync
-          ? `Qualifying synced! Pole position scored for ${res.scoredCount} prediction${res.scoredCount !== 1 ? "s" : ""}. Sync again after the race to score P1–P3 and P?.`
-          : `Fully synced! All categories scored for ${res.scoredCount} prediction${res.scoredCount !== 1 ? "s" : ""}.`;
-        setSyncMsg({ text: msg });
-        if (res.scores) setScores(res.scores as Score[]);
-        setStoredResults((prev) => ({
-          ...(prev ?? {
-            id: "",
-            race_weekend_id: raceWeekend.id,
-            sprint_qualifying: null,
-            created_at: new Date().toISOString(),
-          }),
-          qualifying: (res.qualifying ?? prev?.qualifying ?? null) as Json,
-          // Only update race/sprint if the full sync returned them
-          race: (!res.partialSync ? (res.race ?? prev?.race ?? null) : (prev?.race ?? null)) as Json,
-          sprint_race: (
-            !res.partialSync && res.sprintRace && res.sprintRace.length > 0
-              ? res.sprintRace
-              : prev?.sprint_race ?? null
-          ) as Json,
-          last_synced_at: new Date().toISOString(),
-        }));
+        return;
       }
+
+      const msg: Record<string, string> = {
+        "sprint-only":
+          `Sprint synced! Sprint pole & winner scored for ${res.scoredCount} prediction${res.scoredCount !== 1 ? "s" : ""}. Sync again after main qualifying.`,
+        "qualifying-only":
+          `Qualifying synced! Pole position scored for ${res.scoredCount} prediction${res.scoredCount !== 1 ? "s" : ""}. Sync again after the race.`,
+        "sprint+qualifying":
+          `Sprint + qualifying synced! Sprint & pole scored. Sync again after the race for P1–P3 and P?.`,
+        "full":
+          `Fully synced! All categories scored for ${res.scoredCount} prediction${res.scoredCount !== 1 ? "s" : ""}.`,
+      };
+      setSyncMsg({ text: msg[res.syncType ?? "full"] });
+
+      if (res.scores) setScores(res.scores as Score[]);
+      setStoredResults((prev) => ({
+        ...(prev ?? {
+          id: "",
+          race_weekend_id: raceWeekend.id,
+          created_at: new Date().toISOString(),
+        }),
+        qualifying: (res.qualifying?.length ? res.qualifying : prev?.qualifying ?? null) as Json,
+        race: (!res.partialSync ? (res.race ?? prev?.race ?? null) : (prev?.race ?? null)) as Json,
+        sprint_race: (
+          res.sprintRace?.length
+            ? res.sprintRace
+            : prev?.sprint_race ?? null
+        ) as Json,
+        sprint_qualifying: (
+          res.sprintQualifying?.length
+            ? res.sprintQualifying
+            : prev?.sprint_qualifying ?? null
+        ) as Json,
+        last_synced_at: new Date().toISOString(),
+      }));
     });
   }
 
@@ -196,11 +237,25 @@ export default function ResultsClient({
     });
   }
 
-  const hasQualifying = qualifying.length > 0;
-  const hasRace = race.length > 0;
-  const alreadySynced = !!storedResults?.last_synced_at;
-  // Partial = qualifying stored but no race results yet
-  const isPartial = alreadySynced && hasQualifying && !hasRace;
+  // Sync button label
+  const btnLabel = pending
+    ? "Syncing…"
+    : syncState === "not-synced"
+    ? "Sync Results"
+    : syncState === "sprint-only"
+    ? "Sync Qualifying"
+    : syncState === "sprint+qualifying" || syncState === "qualifying-only"
+    ? "Sync Race Results"
+    : "Refresh Results";
+
+  // Status text
+  const statusText: Record<SyncType | "not-synced", string> = {
+    "not-synced": "Not yet synced",
+    "sprint-only": "Sprint synced — qualifying & race pending",
+    "qualifying-only": "Qualifying synced — race pending",
+    "sprint+qualifying": "Sprint + qualifying synced — race pending",
+    "full": "Fully synced",
+  };
 
   return (
     <div className="space-y-6">
@@ -208,14 +263,12 @@ export default function ResultsClient({
       <div className="bg-surface rounded-2xl border border-white/5 p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-white">
-              {!alreadySynced && "Not yet synced"}
-              {isPartial && "Qualifying synced — race pending"}
-              {alreadySynced && !isPartial && "Fully synced"}
-            </p>
+            <p className="text-sm font-semibold text-white">{statusText[syncState]}</p>
             <p className="text-xs text-muted mt-0.5">
               {alreadySynced
                 ? `Last fetched: ${fmtTime(storedResults?.last_synced_at)}`
+                : isSprint
+                ? "Sync after the sprint race, then after main qualifying, then after the race."
                 : "Sync after qualifying to score pole position, then again after the race for the rest."}
             </p>
           </div>
@@ -224,13 +277,7 @@ export default function ResultsClient({
             disabled={pending}
             className="shrink-0 min-h-[44px] px-5 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-60"
           >
-            {pending
-              ? "Syncing…"
-              : !alreadySynced
-              ? "Sync Results"
-              : isPartial
-              ? "Sync Race Results"
-              : "Refresh Results"}
+            {btnLabel}
           </button>
         </div>
 
@@ -251,25 +298,40 @@ export default function ResultsClient({
       {!alreadySynced && (
         <p className="text-xs text-muted text-center">
           Results are fetched from{" "}
-          <span className="text-white font-medium">Jolpica</span> (api.jolpi.ca) — the official
-          Ergast F1 API replacement. Qualifying data appears shortly after Saturday qualifying;
-          race data within minutes of the chequered flag.
+          <span className="text-white font-medium">Jolpica</span> (api.jolpi.ca).
+          {isSprint
+            ? " Sprint qualifying order is derived from the sprint race grid. Sync after the sprint race, then after main qualifying, then after the race."
+            : " Qualifying data appears shortly after Saturday qualifying; race data within minutes of the chequered flag."}
         </p>
       )}
 
       {/* ── Results tables ── */}
-      {hasQualifying && (
+      {alreadySynced && hasAnyResults && (
         <div>
           <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">Results</p>
-          <div className={`grid gap-4 ${sprintRace.length > 0 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2"}`}>
-            <ResultsTable title="Qualifying" entries={qualifying} />
+          <div className={`grid gap-4 ${
+            isSprint
+              ? "grid-cols-1 sm:grid-cols-2"
+              : hasRace
+              ? "grid-cols-1 sm:grid-cols-2"
+              : "grid-cols-1 sm:grid-cols-2"
+          }`}>
+            {sprintQualifying.length > 0 && (
+              <ResultsTable title="Sprint Qualifying" entries={sprintQualifying} />
+            )}
+            {sprintRace.length > 0 && (
+              <ResultsTable title="Sprint Race" entries={sprintRace} />
+            )}
+            {hasQualifying && (
+              <ResultsTable title="Qualifying" entries={qualifying} />
+            )}
             {hasRace ? (
               <ResultsTable
                 title="Race"
                 entries={race}
                 highlight={raceWeekend.p_what_position}
               />
-            ) : (
+            ) : alreadySynced && hasQualifying && (
               <div className="bg-background/40 border border-white/5 rounded-xl p-4 flex items-center justify-center">
                 <p className="text-xs text-muted text-center">
                   Race results not yet available.
@@ -278,20 +340,11 @@ export default function ResultsClient({
                 </p>
               </div>
             )}
-            {sprintRace.length > 0 && (
-              <ResultsTable title="Sprint Race" entries={sprintRace} />
-            )}
           </div>
           {hasRace && raceWeekend.p_what_position && (
             <p className="text-xs text-muted mt-2">
               P{raceWeekend.p_what_position} is highlighted — that is the mystery question position.
               {pWhatActual ? ` Correct answer: ${pWhatActual}.` : ""}
-            </p>
-          )}
-          {sprintRace.length > 0 && (
-            <p className="text-xs text-muted mt-1">
-              Sprint results are displayed for reference. Sprint categories are not auto-scored
-              (no sprint predictions are collected).
             </p>
           )}
         </div>
@@ -303,9 +356,17 @@ export default function ResultsClient({
           <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-1">
             Scoring breakdown
           </p>
-          {hasQualifying && (
-            <p className="text-xs text-muted mb-4">
-              Pole: <span className="text-white font-mono">{poleSitter || "—"}</span>
+          {hasAnyResults && (
+            <p className="text-xs text-muted mb-4 leading-relaxed">
+              {isSprint && (
+                <>
+                  S.Pole: <span className="text-white font-mono">{sprintPole || "pending"}</span>
+                  {" · "}
+                  S.Win: <span className="text-white font-mono">{sprintWinner || "pending"}</span>
+                  {" · "}
+                </>
+              )}
+              Pole: <span className="text-white font-mono">{poleSitter || (hasQualifying ? "—" : "pending")}</span>
               {" · "}P1: <span className="text-white font-mono">{p1 || "pending"}</span>
               {" · "}P2: <span className="text-white font-mono">{p2 || "pending"}</span>
               {" · "}P3: <span className="text-white font-mono">{p3 || "pending"}</span>
@@ -320,10 +381,12 @@ export default function ResultsClient({
 
           {/* Auto-scored table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[500px]">
+            <table className={`w-full text-sm ${isSprint ? "min-w-[680px]" : "min-w-[500px]"}`}>
               <thead>
                 <tr className="text-xs text-muted uppercase tracking-widest border-b border-white/5">
                   <th className="text-left pb-3 pr-4 font-semibold">Player</th>
+                  {isSprint && <th className="text-left pb-3 pr-3 font-semibold">S.Pole</th>}
+                  {isSprint && <th className="text-left pb-3 pr-3 font-semibold">S.Win</th>}
                   <th className="text-left pb-3 pr-3 font-semibold">Pole</th>
                   <th className="text-left pb-3 pr-3 font-semibold">P1</th>
                   <th className="text-left pb-3 pr-3 font-semibold">P2</th>
@@ -339,6 +402,24 @@ export default function ResultsClient({
                   return (
                     <tr key={pred.user_id}>
                       <td className="py-3 pr-4 text-white font-semibold whitespace-nowrap">{name}</td>
+                      {isSprint && (
+                        <td className="py-3 pr-3">
+                          <Cell
+                            correct={score?.sprint_pole_correct ?? null}
+                            pred={pred.sprint_pole ?? "—"}
+                            actual={sprintPole}
+                          />
+                        </td>
+                      )}
+                      {isSprint && (
+                        <td className="py-3 pr-3">
+                          <Cell
+                            correct={score?.sprint_winner_correct ?? null}
+                            pred={pred.sprint_winner ?? "—"}
+                            actual={sprintWinner}
+                          />
+                        </td>
+                      )}
                       <td className="py-3 pr-3">
                         <Cell correct={score?.pole_correct ?? null} pred={pred.pole_position} actual={poleSitter} />
                       </td>
@@ -402,11 +483,11 @@ export default function ResultsClient({
             </div>
           ))}
 
-          {initialPredictions.length > 0 && !hasQualifying && (
+          {initialPredictions.length > 0 && !hasAnyResults && (
             <p className="text-xs text-muted mt-4 text-center">
-              Sync after qualifying finishes to score pole position, then again after the race for
-              P1–P3 and P{raceWeekend.p_what_position}. You can award Surprise / Flop / Wildcard
-              points at any time after syncing.
+              {isSprint
+                ? "Sync after the sprint race to score sprint pole & winner. Then sync after main qualifying for pole, and after the race for everything else."
+                : "Sync after qualifying to score pole position, then again after the race for P1–P3 and P?. You can award Surprise / Flop / Wildcard at any time after the first sync."}
             </p>
           )}
         </div>
@@ -482,12 +563,13 @@ function DebugPanel({
             <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-2">
               Stored state
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
               {[
                 { label: "Last synced", value: storedResults?.last_synced_at ? new Date(storedResults.last_synced_at).toLocaleTimeString() : "never" },
-                { label: "Qualifying rows", value: Array.isArray(storedResults?.qualifying) ? (storedResults.qualifying as unknown[]).length : 0 },
-                { label: "Race rows", value: Array.isArray(storedResults?.race) ? (storedResults.race as unknown[]).length : 0 },
-                { label: "Score rows", value: scores.length },
+                { label: "Qual rows",   value: Array.isArray(storedResults?.qualifying) ? (storedResults.qualifying as unknown[]).length : 0 },
+                { label: "Race rows",   value: Array.isArray(storedResults?.race) ? (storedResults.race as unknown[]).length : 0 },
+                { label: "Sprint rows", value: Array.isArray(storedResults?.sprint_race) ? (storedResults.sprint_race as unknown[]).length : 0 },
+                { label: "Score rows",  value: scores.length },
               ].map((item) => (
                 <div key={item.label} className="bg-white/5 rounded-lg p-2">
                   <p className="text-muted">{item.label}</p>
@@ -497,36 +579,45 @@ function DebugPanel({
             </div>
           </div>
 
-          {/* Raw stored JSON — qualifying */}
           {storedResults?.qualifying && (
             <div>
-              <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-2">
-                Raw qualifying JSON (stored)
-              </p>
+              <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-2">Raw qualifying JSON</p>
               <pre className="text-xs font-mono text-white/70 bg-black/30 rounded-lg p-3 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
                 {JSON.stringify(storedResults.qualifying, null, 2)}
               </pre>
             </div>
           )}
 
-          {/* Raw stored JSON — race */}
+          {storedResults?.sprint_qualifying && (
+            <div>
+              <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-2">Raw sprint qualifying JSON (derived from grid)</p>
+              <pre className="text-xs font-mono text-white/70 bg-black/30 rounded-lg p-3 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
+                {JSON.stringify(storedResults.sprint_qualifying, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          {storedResults?.sprint_race && (
+            <div>
+              <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-2">Raw sprint race JSON</p>
+              <pre className="text-xs font-mono text-white/70 bg-black/30 rounded-lg p-3 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
+                {JSON.stringify(storedResults.sprint_race, null, 2)}
+              </pre>
+            </div>
+          )}
+
           {storedResults?.race && (
             <div>
-              <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-2">
-                Raw race JSON (stored)
-              </p>
+              <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-2">Raw race JSON</p>
               <pre className="text-xs font-mono text-white/70 bg-black/30 rounded-lg p-3 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
                 {JSON.stringify(storedResults.race, null, 2)}
               </pre>
             </div>
           )}
 
-          {/* Scores */}
           {scores.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-2">
-                Scores (current state)
-              </p>
+              <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-2">Scores (current state)</p>
               <pre className="text-xs font-mono text-white/70 bg-black/30 rounded-lg p-3 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
                 {JSON.stringify(scores, null, 2)}
               </pre>

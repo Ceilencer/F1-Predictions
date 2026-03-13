@@ -33,11 +33,19 @@ export default async function AdminPage() {
     supabase.from("scores").select("*"),
   ]);
 
+  // Auto-detect the race to sync: earliest unsynced race whose qualifying
+  // deadline has already passed (works for both standard and sprint weekends).
+  const now = new Date().toISOString();
+  const raceToSync =
+    (raceWeekends ?? [])
+      .filter((r) => !r.results_synced && r.qualifying_deadline < now)
+      .sort((a, b) => a.round - b.round)[0] ?? null;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
-        <SyncButton raceWeekends={raceWeekends ?? []} />
+        <SyncButton race={raceToSync} />
       </div>
 
       <AdminClient
