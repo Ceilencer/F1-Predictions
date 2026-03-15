@@ -80,6 +80,8 @@ function DriverTag({ code }: { code: string }) {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
+  sprint_pole: "Spr Pole",
+  sprint_winner: "Spr Win",
   pole_position: "Pole",
   top3_p1: "P1",
   top3_p2: "P2",
@@ -221,24 +223,28 @@ export default async function RaceDetailPage({
                   )}
                 </div>
 
-                {/* Predictions grid */}
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Predictions list */}
+                <div className="divide-y divide-white/5">
                   {(
                     [
-                      ["pole_position", pred.pole_position, score?.pole_correct],
-                      ["top3_p1", pred.top3_p1, score?.top3_p1_correct],
-                      ["top3_p2", pred.top3_p2, score?.top3_p2_correct],
-                      ["top3_p3", pred.top3_p3, score?.top3_p3_correct],
+                      ...(raceWeekend.is_sprint_weekend ? [
+                        ["sprint_pole",   pred.sprint_pole   ?? "", score?.sprint_pole_correct],
+                        ["sprint_winner", pred.sprint_winner ?? "", score?.sprint_winner_correct],
+                      ] : []),
+                      ["pole_position",   pred.pole_position,   score?.pole_correct],
+                      ["top3_p1",         pred.top3_p1,         score?.top3_p1_correct],
+                      ["top3_p2",         pred.top3_p2,         score?.top3_p2_correct],
+                      ["top3_p3",         pred.top3_p3,         score?.top3_p3_correct],
                       ["biggest_surprise", pred.biggest_surprise, score?.surprise_correct],
-                      ["biggest_flop", pred.biggest_flop, score?.flop_correct],
-                      ["p_what_driver", pred.p_what_driver, score?.p_what_correct],
+                      ["biggest_flop",    pred.biggest_flop,    score?.flop_correct],
+                      ["p_what_driver",   pred.p_what_driver,   score?.p_what_correct],
                     ] as [string, string, boolean | null | undefined][]
                   ).map(([key, value, correct]) => (
-                    <div key={key} className="flex items-center justify-between gap-2 py-1">
-                      <span className="text-xs text-muted w-20 shrink-0">
+                    <div key={key} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="text-xs text-muted w-16 shrink-0">
                         {CATEGORY_LABELS[key]}
                       </span>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <DriverTag code={value} />
                       </div>
                       <ScoreBadge correct={correct ?? null} />
@@ -246,9 +252,9 @@ export default async function RaceDetailPage({
                   ))}
 
                   {/* Crazy prediction */}
-                  <div className="col-span-full flex items-start justify-between gap-2 py-1">
-                    <span className="text-xs text-muted w-20 shrink-0">Wildcard</span>
-                    <p className="flex-1 text-sm text-white italic">
+                  <div className="flex items-start gap-3 px-4 py-2.5">
+                    <span className="text-xs text-muted w-16 shrink-0 pt-0.5">Wildcard</span>
+                    <p className="flex-1 text-sm text-white italic min-w-0">
                       &ldquo;{pred.crazy_prediction}&rdquo;
                     </p>
                     <ScoreBadge correct={score?.crazy_correct ?? null} />
