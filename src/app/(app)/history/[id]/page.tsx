@@ -70,12 +70,78 @@ function DriverTag({ code }: { code: string }) {
         style={{ backgroundColor: colour }}
       />
       <span className="font-mono text-sm text-white">{code}</span>
-      {driver && (
-        <span className="text-xs text-muted hidden sm:inline">
-          {driver.name.split(" ").at(-1)}
-        </span>
-      )}
     </span>
+  );
+}
+
+function ResultsConnector({
+  qualResults,
+  raceResults,
+}: {
+  qualResults: JolpicaResult[];
+  raceResults: JolpicaResult[];
+}) {
+  const ROW_H = 28;
+  const totalHeight = Math.max(qualResults.length, raceResults.length) * ROW_H;
+  const racePosMap = new Map(raceResults.map((r, i) => [r.Driver.code, i]));
+
+  return (
+    <div>
+      <div className="grid grid-cols-[auto_1fr_auto] mb-2">
+        <p className="text-xs text-muted">Qualifying</p>
+        <div />
+        <p className="text-xs text-muted">Race</p>
+      </div>
+      <div className="grid grid-cols-[auto_1fr_auto] items-start">
+        {/* Qualifying column */}
+        <div>
+          {qualResults.map((r) => (
+            <div key={r.position} style={{ height: ROW_H }} className="flex items-center gap-2 text-sm">
+              <span className="text-muted w-4 text-right shrink-0">{r.position}</span>
+              <DriverTag code={r.Driver.code} />
+            </div>
+          ))}
+        </div>
+
+        {/* SVG connector — fills remaining space between columns */}
+        <svg
+          width="100%"
+          height={totalHeight}
+          viewBox={`0 0 10 ${totalHeight}`}
+          preserveAspectRatio="none"
+        >
+          {qualResults.map((r, qualIdx) => {
+            const raceIdx = racePosMap.get(r.Driver.code);
+            if (raceIdx === undefined) return null;
+            const driver = getDriverByCode(r.Driver.code);
+            const color = driver?.team.colour ?? "#6b7280";
+            const y1 = qualIdx * ROW_H + ROW_H / 2;
+            const y2 = raceIdx * ROW_H + ROW_H / 2;
+            return (
+              <path
+                key={r.Driver.code}
+                d={`M 0,${y1} C 5,${y1} 5,${y2} 10,${y2}`}
+                fill="none"
+                stroke={color}
+                strokeWidth={1.5}
+                strokeOpacity={0.5}
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          })}
+        </svg>
+
+        {/* Race column */}
+        <div>
+          {raceResults.map((r) => (
+            <div key={r.position} style={{ height: ROW_H }} className="flex items-center gap-2 text-sm">
+              <span className="text-muted w-4 text-right shrink-0">{r.position}</span>
+              <DriverTag code={r.Driver.code} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -155,30 +221,10 @@ export default async function RaceDetailPage({
       {actualResults && (
         <div className="bg-surface rounded-2xl border border-white/5 p-5">
           <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-4">Actual Results</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted mb-2">Qualifying</p>
-              <div className="space-y-1">
-                {actualResults.qualResults.map((r) => (
-                  <div key={r.position} className="flex items-center gap-2 text-sm">
-                    <span className="text-muted w-4 text-right">{r.position}</span>
-                    <DriverTag code={r.Driver.code} />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-muted mb-2">Race</p>
-              <div className="space-y-1">
-                {actualResults.raceResults.map((r) => (
-                  <div key={r.position} className="flex items-center gap-2 text-sm">
-                    <span className="text-muted w-4 text-right">{r.position}</span>
-                    <DriverTag code={r.Driver.code} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <ResultsConnector
+            qualResults={actualResults.qualResults}
+            raceResults={actualResults.raceResults}
+          />
           {/* P What actual */}
           {(() => {
             const pWhatDriver = actualResults.raceResults.find(
