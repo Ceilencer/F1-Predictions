@@ -159,7 +159,7 @@ export default async function RaceDetailPage({
             <div>
               <p className="text-xs text-muted mb-2">Qualifying</p>
               <div className="space-y-1">
-                {actualResults.qualResults.slice(0, 5).map((r) => (
+                {actualResults.qualResults.map((r) => (
                   <div key={r.position} className="flex items-center gap-2 text-sm">
                     <span className="text-muted w-4 text-right">{r.position}</span>
                     <DriverTag code={r.Driver.code} />
@@ -170,7 +170,7 @@ export default async function RaceDetailPage({
             <div>
               <p className="text-xs text-muted mb-2">Race</p>
               <div className="space-y-1">
-                {actualResults.raceResults.slice(0, 5).map((r) => (
+                {actualResults.raceResults.map((r) => (
                   <div key={r.position} className="flex items-center gap-2 text-sm">
                     <span className="text-muted w-4 text-right">{r.position}</span>
                     <DriverTag code={r.Driver.code} />
