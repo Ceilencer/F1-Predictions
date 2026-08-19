@@ -171,6 +171,70 @@ CREATE TABLE IF NOT EXISTS public.race_results (
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ────────────────────────────────────────────────────────────
+-- 7. TEAMS  (constructors — the grid's teams)
+-- The `key` column is the STABLE identity used everywhere, and must
+-- equal the short names previously stored in predictions.biggest_surprise /
+-- biggest_flop (e.g. 'Red Bull', 'Ferrari'). Never change a key once picks exist.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.teams (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  key        TEXT        NOT NULL UNIQUE,      -- = old shortName, stored in predictions
+  name       TEXT        NOT NULL,
+  logo_path  TEXT        NOT NULL DEFAULT '',
+  colour     TEXT        NOT NULL DEFAULT '#6b7280',
+  sort_order INTEGER     NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ────────────────────────────────────────────────────────────
+-- 8. DRIVERS  (the full roster — every potential driver)
+-- Add-only: never hard-delete a driver, or history that references their
+-- code will lose its name/photo. Use is_active = FALSE to retire a driver.
+-- `code` is the 3-letter FIA code stored in predictions (e.g. 'VER').
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.drivers (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  code        TEXT        NOT NULL UNIQUE,     -- stored in predictions
+  name        TEXT        NOT NULL,
+  nationality TEXT        NOT NULL DEFAULT '',
+  number      INTEGER,
+  photo_path  TEXT        NOT NULL DEFAULT '',
+  is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ────────────────────────────────────────────────────────────
+-- 9. SEASON SEATS  (THE DEFAULT / NORMAL LINEUP)
+-- Two seats per team per season. Editing a row here is a PERMANENT
+-- lineup change that applies to every future weekend's snapshot.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.season_seats (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  season     INTEGER     NOT NULL,
+  team_id    UUID        NOT NULL REFERENCES public.teams(id)   ON DELETE CASCADE,
+  seat_no    INTEGER     NOT NULL CHECK (seat_no IN (1, 2)),
+  driver_id  UUID        REFERENCES public.drivers(id) ON DELETE SET NULL,  -- NULL = empty seat
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (season, team_id, seat_no)
+);
+
+-- ────────────────────────────────────────────────────────────
+-- 10. RACE WEEKEND DRIVERS  (THE PER-WEEKEND GRID — snapshot / one-off)
+-- Populated by snapshotting season_seats when a weekend is created.
+-- Editing a row here is a ONE-OFF override for that weekend only and
+-- freezes what the history pages show for that race, forever.
+-- If a weekend has no rows here, the grid falls back to season_seats.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.race_weekend_drivers (
+  id               UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+  race_weekend_id  UUID    NOT NULL REFERENCES public.race_weekends(id) ON DELETE CASCADE,
+  team_id          UUID    NOT NULL REFERENCES public.teams(id)         ON DELETE CASCADE,
+  seat_no          INTEGER NOT NULL CHECK (seat_no IN (1, 2)),
+  driver_id        UUID    REFERENCES public.drivers(id) ON DELETE SET NULL,  -- NULL = empty seat
+  UNIQUE (race_weekend_id, team_id, seat_no)
+);
+
 -- ════════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY (RLS)
 -- ════════════════════════════════════════════════════════════
@@ -181,6 +245,10 @@ ALTER TABLE public.race_weekends     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.predictions       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scores            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.race_results      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.teams                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.drivers              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.season_seats         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.race_weekend_drivers ENABLE ROW LEVEL SECURITY;
 
 -- ── profiles ──────────────────────────────────────────────
 -- Anyone authenticated can read all profiles (for leaderboard display).
@@ -291,6 +359,31 @@ CREATE POLICY "Only admins can update scores"
   USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)
   );
+
+-- ── grid tables: teams / drivers / season_seats / race_weekend_drivers ──
+-- All readable by any authenticated user; all writes are admin-only.
+-- A helper predicate for "current user is admin".
+DO $$
+DECLARE
+  t   TEXT;
+  adm TEXT := 'EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)';
+BEGIN
+  FOREACH t IN ARRAY ARRAY['teams', 'drivers', 'season_seats', 'race_weekend_drivers'] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS "%1$s_select" ON public.%1$s;', t);
+    EXECUTE format('DROP POLICY IF EXISTS "%1$s_insert" ON public.%1$s;', t);
+    EXECUTE format('DROP POLICY IF EXISTS "%1$s_update" ON public.%1$s;', t);
+    EXECUTE format('DROP POLICY IF EXISTS "%1$s_delete" ON public.%1$s;', t);
+
+    EXECUTE format(
+      'CREATE POLICY "%1$s_select" ON public.%1$s FOR SELECT TO authenticated USING (TRUE);', t);
+    EXECUTE format(
+      'CREATE POLICY "%1$s_insert" ON public.%1$s FOR INSERT TO authenticated WITH CHECK (%2$s);', t, adm);
+    EXECUTE format(
+      'CREATE POLICY "%1$s_update" ON public.%1$s FOR UPDATE TO authenticated USING (%2$s) WITH CHECK (%2$s);', t, adm);
+    EXECUTE format(
+      'CREATE POLICY "%1$s_delete" ON public.%1$s FOR DELETE TO authenticated USING (%2$s);', t, adm);
+  END LOOP;
+END $$;
 
 -- ════════════════════════════════════════════════════════════
 -- SEED: add your first admin email so you can log in

@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getWeekendDriverMap, getTeamMap } from "@/lib/grid";
 import PredictionCard from "@/components/PredictionCard";
 
 interface PageProps {
@@ -72,6 +73,12 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
 
   const others = sorted.filter((p) => p.user_id !== user.id);
 
+  // Resolve driver/team picks against THIS weekend's grid (frozen snapshot).
+  const [driverMap, teamMap] = await Promise.all([
+    getWeekendDriverMap(raceId),
+    getTeamMap(),
+  ]);
+
   return (
     <div className="max-w-5xl mx-auto">
       {/* Header */}
@@ -110,6 +117,8 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
               pWhatPosition={raceWeekend.p_what_position}
               isOwn
               isSprint={raceWeekend.is_sprint_weekend}
+              driverMap={driverMap}
+              teamMap={teamMap}
               pole_position={ownPrediction.pole_position}
               top3_p1={ownPrediction.top3_p1}
               top3_p2={ownPrediction.top3_p2}
@@ -136,6 +145,8 @@ export default async function OthersPredictionsPage({ params }: PageProps) {
               pWhatPosition={raceWeekend.p_what_position}
               isOwn={prediction.user_id === user.id}
               isSprint={raceWeekend.is_sprint_weekend}
+              driverMap={driverMap}
+              teamMap={teamMap}
               pole_position={prediction.pole_position}
               top3_p1={prediction.top3_p1}
               top3_p2={prediction.top3_p2}

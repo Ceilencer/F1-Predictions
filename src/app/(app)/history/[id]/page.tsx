@@ -1,7 +1,8 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getDriverByCode, getTeamByShortName } from "@/config/drivers";
+import { getWeekendDriverMap, getTeamMap, resolveDriver, resolveTeam } from "@/lib/grid";
+import type { DriverMap, TeamMap } from "@/lib/grid";
 
 // ── Jolpica API types ─────────────────────────────────────────────────────────
 
@@ -59,10 +60,18 @@ function ScoreBadge({ correct }: { correct: boolean | null }) {
   );
 }
 
-function DriverTag({ code }: { code: string }) {
-  const driver = getDriverByCode(code);
-  const team = !driver ? getTeamByShortName(code) : null;
-  const colour = driver?.team.colour ?? team?.colour ?? "#6b7280";
+function DriverTag({
+  code,
+  driverMap,
+  teamMap,
+}: {
+  code: string;
+  driverMap: DriverMap;
+  teamMap: TeamMap;
+}) {
+  const driver = resolveDriver(driverMap, code);
+  const team = !driver ? resolveTeam(teamMap, code) : null;
+  const colour = driver?.team?.colour ?? team?.colour ?? "#6b7280";
   return (
     <span className="inline-flex items-center gap-1">
       <span
@@ -77,9 +86,13 @@ function DriverTag({ code }: { code: string }) {
 function ResultsConnector({
   qualResults,
   raceResults,
+  driverMap,
+  teamMap,
 }: {
   qualResults: JolpicaResult[];
   raceResults: JolpicaResult[];
+  driverMap: DriverMap;
+  teamMap: TeamMap;
 }) {
   const ROW_H = 28;
   const totalHeight = Math.max(qualResults.length, raceResults.length) * ROW_H;
@@ -98,7 +111,7 @@ function ResultsConnector({
           {qualResults.map((r) => (
             <div key={r.position} style={{ height: ROW_H }} className="flex items-center gap-2 text-sm">
               <span className="text-muted w-4 text-right shrink-0">{r.position}</span>
-              <DriverTag code={r.Driver.code} />
+              <DriverTag code={r.Driver.code} driverMap={driverMap} teamMap={teamMap} />
             </div>
           ))}
         </div>
@@ -113,8 +126,8 @@ function ResultsConnector({
           {qualResults.map((r, qualIdx) => {
             const raceIdx = racePosMap.get(r.Driver.code);
             if (raceIdx === undefined) return null;
-            const driver = getDriverByCode(r.Driver.code);
-            const color = driver?.team.colour ?? "#6b7280";
+            const driver = resolveDriver(driverMap, r.Driver.code);
+            const color = driver?.team?.colour ?? "#6b7280";
             const y1 = qualIdx * ROW_H + ROW_H / 2;
             const y2 = raceIdx * ROW_H + ROW_H / 2;
             return (
@@ -136,7 +149,7 @@ function ResultsConnector({
           {raceResults.map((r) => (
             <div key={r.position} style={{ height: ROW_H }} className="flex items-center gap-2 text-sm">
               <span className="text-muted w-4 text-right shrink-0">{r.position}</span>
-              <DriverTag code={r.Driver.code} />
+              <DriverTag code={r.Driver.code} driverMap={driverMap} teamMap={teamMap} />
             </div>
           ))}
         </div>
@@ -184,6 +197,12 @@ export default async function RaceDetailPage({
 
   if (!raceWeekend) notFound();
 
+  // Resolve driver/team picks against this weekend's frozen grid snapshot.
+  const [driverMap, teamMap] = await Promise.all([
+    getWeekendDriverMap(id),
+    getTeamMap(),
+  ]);
+
   // Only fetch actual results if the race is synced
   const actualResults = raceWeekend.results_synced
     ? await fetchResults(raceWeekend.season, raceWeekend.round)
@@ -224,6 +243,8 @@ export default async function RaceDetailPage({
           <ResultsConnector
             qualResults={actualResults.qualResults}
             raceResults={actualResults.raceResults}
+            driverMap={driverMap}
+            teamMap={teamMap}
           />
           {/* P What actual */}
           {(() => {
@@ -233,7 +254,7 @@ export default async function RaceDetailPage({
             return pWhatDriver ? (
               <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-sm">
                 <span className="text-muted">P{raceWeekend.p_what_position} was:</span>
-                <DriverTag code={pWhatDriver.Driver.code} />
+                <DriverTag code={pWhatDriver.Driver.code} driverMap={driverMap} teamMap={teamMap} />
               </div>
             ) : null;
           })()}
@@ -291,7 +312,7 @@ export default async function RaceDetailPage({
                         {CATEGORY_LABELS[key]}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <DriverTag code={value} />
+                        <DriverTag code={value} driverMap={driverMap} teamMap={teamMap} />
                       </div>
                       <ScoreBadge correct={correct ?? null} />
                     </div>

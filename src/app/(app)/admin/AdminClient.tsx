@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   addWhitelistedEmail,
   removeWhitelistedEmail,
@@ -9,6 +10,12 @@ import {
   updateRaceDeadline,
   updateSubjectiveScore,
   seedFromCalendar,
+  seedGridFromConfig,
+  addDriver,
+  updateDriver,
+  upsertSeasonSeat,
+  upsertWeekendSeat,
+  resetWeekendGridToDefault,
 } from "./actions";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -17,6 +24,10 @@ type RaceWeekend = Database["public"]["Tables"]["race_weekends"]["Row"];
 type Score = Database["public"]["Tables"]["scores"]["Row"];
 type Prediction = Database["public"]["Tables"]["predictions"]["Row"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type TeamRow = Database["public"]["Tables"]["teams"]["Row"];
+type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
+type SeasonSeatRow = Database["public"]["Tables"]["season_seats"]["Row"];
+type WeekendDriverRow = Database["public"]["Tables"]["race_weekend_drivers"]["Row"];
 
 interface AdminClientProps {
   whitelist: WhitelistRow[];
@@ -24,9 +35,14 @@ interface AdminClientProps {
   profiles: Profile[];
   predictions: Prediction[];
   scores: Score[];
+  teams: TeamRow[];
+  drivers: DriverRow[];
+  seasonSeats: SeasonSeatRow[];
+  weekendDrivers: WeekendDriverRow[];
+  season: number;
 }
 
-type Tab = "whitelist" | "races" | "scoring";
+type Tab = "whitelist" | "races" | "lineups" | "scoring";
 
 // ── tiny UI components ────────────────────────────────────────────────────────
 
@@ -549,6 +565,523 @@ function ScoringSection({
   );
 }
 
+// ── Lineups (grid) section ────────────────────────────────────────────────────
+
+function SeatSelect({
+  drivers,
+  value,
+  onChange,
+  disabled,
+}: {
+  drivers: DriverRow[];
+  value: string | null;
+  onChange: (driverId: string | null) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <select
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value || null)}
+      disabled={disabled}
+      className="w-full min-h-[44px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white focus:border-accent focus:outline-none disabled:opacity-60"
+    >
+      <option value="">— empty —</option>
+      {drivers.map((d) => (
+        <option key={d.id} value={d.id}>
+          {d.code} — {d.name}
+          {d.is_active ? "" : " (inactive)"}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function DriverThumb({ driver }: { driver: DriverRow }) {
+  if (driver.photo_path) {
+    return (
+      <div className="relative h-9 w-9 rounded-full overflow-hidden shrink-0 bg-white/10">
+        <Image src={driver.photo_path} alt={driver.name} fill unoptimized className="object-cover object-top" sizes="36px" />
+      </div>
+    );
+  }
+  return (
+    <div className="h-9 w-9 rounded-full shrink-0 bg-white/10 flex items-center justify-center">
+      <span className="text-[10px] font-bold text-muted">{driver.code}</span>
+    </div>
+  );
+}
+
+function LineupsSection({
+  teams,
+  drivers: initialDrivers,
+  seasonSeats: initialSeasonSeats,
+  weekendDrivers: initialWeekendDrivers,
+  raceWeekends,
+  season,
+}: {
+  teams: TeamRow[];
+  drivers: DriverRow[];
+  seasonSeats: SeasonSeatRow[];
+  weekendDrivers: WeekendDriverRow[];
+  raceWeekends: RaceWeekend[];
+  season: number;
+}) {
+  const [view, setView] = useState<"roster" | "season" | "weekend">("roster");
+  const [drivers, setDrivers] = useState(initialDrivers);
+  const [seasonSeats, setSeasonSeats] = useState(initialSeasonSeats);
+  const [weekendSeats, setWeekendSeats] = useState(initialWeekendDrivers);
+  const [selectedWeekendId, setSelectedWeekendId] = useState("");
+  const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  // New-driver form
+  const [nd, setNd] = useState({ code: "", name: "", nationality: "", number: "", photo_path: "" });
+  // Inline driver editing
+  const [editId, setEditId] = useState<string | null>(null);
+  const [ed, setEd] = useState({ name: "", nationality: "", number: "", photo_path: "" });
+
+  const rosterSorted = [...drivers].sort((a, b) => {
+    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+    const sa = a.name.split(" ").at(-1) ?? a.name;
+    const sb = b.name.split(" ").at(-1) ?? b.name;
+    return sa.localeCompare(sb);
+  });
+
+  const seasonSeatValue = (teamId: string, seatNo: number) =>
+    seasonSeats.find((s) => s.team_id === teamId && s.seat_no === seatNo)?.driver_id ?? null;
+
+  const weekendSeatValue = (weekendId: string, teamId: string, seatNo: number) => {
+    const row = weekendSeats.find(
+      (w) => w.race_weekend_id === weekendId && w.team_id === teamId && w.seat_no === seatNo
+    );
+    if (row) return row.driver_id;
+    return seasonSeatValue(teamId, seatNo); // fall back to the default
+  };
+
+  // ── handlers ──
+  function doSeed() {
+    startTransition(async () => {
+      const res = await seedGridFromConfig();
+      if (res.error) setMsg({ text: res.error, error: true });
+      else setMsg({ text: `Seeded ${res.teams} teams and ${res.drivers} drivers from config. Reload to see them.` });
+    });
+  }
+
+  function doAddDriver() {
+    if (nd.code.trim().length !== 3) {
+      setMsg({ text: "Driver code must be exactly 3 letters.", error: true });
+      return;
+    }
+    startTransition(async () => {
+      const res = await addDriver(nd);
+      if (res.error) setMsg({ text: res.error, error: true });
+      else {
+        if (res.driver) setDrivers((prev) => [...prev, res.driver!]);
+        setNd({ code: "", name: "", nationality: "", number: "", photo_path: "" });
+        setMsg({ text: "Driver added." });
+      }
+    });
+  }
+
+  function toggleActive(d: DriverRow) {
+    startTransition(async () => {
+      const res = await updateDriver(d.id, { is_active: !d.is_active });
+      if (res.error) setMsg({ text: res.error, error: true });
+      else setDrivers((prev) => prev.map((x) => (x.id === d.id ? { ...x, is_active: !d.is_active } : x)));
+    });
+  }
+
+  function saveDriver(id: string) {
+    startTransition(async () => {
+      const res = await updateDriver(id, ed);
+      if (res.error) setMsg({ text: res.error, error: true });
+      else {
+        setDrivers((prev) =>
+          prev.map((x) =>
+            x.id === id
+              ? {
+                  ...x,
+                  name: ed.name.trim(),
+                  nationality: ed.nationality.trim(),
+                  number: ed.number.trim() ? Number(ed.number) : null,
+                  photo_path: ed.photo_path.trim(),
+                }
+              : x
+          )
+        );
+        setEditId(null);
+        setMsg({ text: "Driver updated." });
+      }
+    });
+  }
+
+  function setSeasonSeat(teamId: string, seatNo: number, driverId: string | null) {
+    startTransition(async () => {
+      const res = await upsertSeasonSeat({ season, teamId, seatNo, driverId });
+      if (res.error) {
+        setMsg({ text: res.error, error: true });
+        return;
+      }
+      setSeasonSeats((prev) => {
+        const idx = prev.findIndex((s) => s.team_id === teamId && s.seat_no === seatNo);
+        if (idx >= 0) return prev.map((s, i) => (i === idx ? { ...s, driver_id: driverId } : s));
+        return [
+          ...prev,
+          { id: `local-${teamId}-${seatNo}`, season, team_id: teamId, seat_no: seatNo, driver_id: driverId, updated_at: new Date().toISOString() },
+        ];
+      });
+    });
+  }
+
+  function setWeekendSeat(weekendId: string, wknSeason: number, teamId: string, seatNo: number, driverId: string | null) {
+    startTransition(async () => {
+      const res = await upsertWeekendSeat({ raceWeekendId: weekendId, season: wknSeason, teamId, seatNo, driverId });
+      if (res.error) {
+        setMsg({ text: res.error, error: true });
+        return;
+      }
+      setWeekendSeats((prev) => {
+        let rows = prev;
+        // First override on this weekend: materialise the full snapshot locally,
+        // mirroring what the server just did, so the rest of the grid stays put.
+        if (!rows.some((w) => w.race_weekend_id === weekendId)) {
+          rows = [
+            ...rows,
+            ...seasonSeats.map((s) => ({
+              id: `local-${weekendId}-${s.team_id}-${s.seat_no}`,
+              race_weekend_id: weekendId,
+              team_id: s.team_id,
+              seat_no: s.seat_no,
+              driver_id: s.driver_id,
+            })),
+          ];
+        }
+        const idx = rows.findIndex(
+          (w) => w.race_weekend_id === weekendId && w.team_id === teamId && w.seat_no === seatNo
+        );
+        if (idx >= 0) return rows.map((w, i) => (i === idx ? { ...w, driver_id: driverId } : w));
+        return [
+          ...rows,
+          { id: `local-${weekendId}-${teamId}-${seatNo}`, race_weekend_id: weekendId, team_id: teamId, seat_no: seatNo, driver_id: driverId },
+        ];
+      });
+    });
+  }
+
+  function doReset(weekendId: string, wknSeason: number) {
+    startTransition(async () => {
+      const res = await resetWeekendGridToDefault(weekendId, wknSeason);
+      if (res.error) setMsg({ text: res.error, error: true });
+      else {
+        setWeekendSeats((prev) => prev.filter((w) => w.race_weekend_id !== weekendId));
+        setMsg({ text: "Weekend reset to the season default lineup." });
+      }
+    });
+  }
+
+  const subTabs: { id: typeof view; label: string }[] = [
+    { id: "roster", label: "Roster" },
+    { id: "season", label: "Season default" },
+    { id: "weekend", label: "Per-weekend" },
+  ];
+
+  const selectedWeekend = raceWeekends.find((r) => r.id === selectedWeekendId) ?? null;
+
+  return (
+    <div>
+      <SectionTitle>Driver line-ups</SectionTitle>
+
+      {teams.length === 0 && (
+        <div className="bg-accent/10 border border-accent/20 rounded-xl p-4 mb-4">
+          <p className="text-sm text-white font-medium">The grid is empty.</p>
+          <p className="text-xs text-muted mt-0.5">
+            Click “Seed grid from config” below to load the teams, drivers and the season-default
+            lineup from the built-in config. You only need to do this once.
+          </p>
+        </div>
+      )}
+
+      {/* sub-tabs */}
+      <div className="flex gap-1 mb-4 flex-wrap">
+        {subTabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setView(t.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              view === t.id ? "bg-accent text-white" : "bg-white/5 text-muted hover:text-white"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {msg && <Feedback msg={msg.text} isError={msg.error} />}
+
+      {/* ── Roster ── */}
+      {view === "roster" && (
+        <div className="mt-4 space-y-5">
+          <div className="bg-accent/10 border border-accent/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-white">Seed grid from config</p>
+              <p className="text-xs text-muted mt-0.5">
+                Loads teams, drivers and the {season} default lineup from the built-in config.
+                Safe to re-run — it never deletes anything.
+              </p>
+            </div>
+            <button
+              onClick={doSeed}
+              disabled={pending}
+              className="shrink-0 min-h-[44px] px-5 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-60"
+            >
+              Seed grid from config
+            </button>
+          </div>
+
+          {/* Add driver */}
+          <div className="bg-background/60 border border-white/5 rounded-xl p-4 space-y-3">
+            <p className="text-sm font-medium text-white">Add a driver to the roster</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <input
+                placeholder="Code (e.g. TSU)"
+                maxLength={3}
+                value={nd.code}
+                onChange={(e) => setNd((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                className="min-h-[44px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white placeholder:text-muted focus:border-accent focus:outline-none uppercase"
+              />
+              <input
+                placeholder="Full name"
+                value={nd.name}
+                onChange={(e) => setNd((f) => ({ ...f, name: e.target.value }))}
+                className="col-span-1 sm:col-span-2 min-h-[44px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+              <input
+                placeholder="Nationality"
+                value={nd.nationality}
+                onChange={(e) => setNd((f) => ({ ...f, nationality: e.target.value }))}
+                className="min-h-[44px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+              <input
+                type="number"
+                placeholder="Number"
+                value={nd.number}
+                onChange={(e) => setNd((f) => ({ ...f, number: e.target.value }))}
+                className="min-h-[44px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+              <input
+                placeholder="Photo path or URL"
+                value={nd.photo_path}
+                onChange={(e) => setNd((f) => ({ ...f, photo_path: e.target.value }))}
+                className="min-h-[44px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+            </div>
+            <p className="text-xs text-muted">
+              Photo: drop an image in <span className="font-mono">public/drivers/</span> and use a path like{" "}
+              <span className="font-mono">/drivers/tsunoda.avif</span>, or paste a full image URL.
+            </p>
+            <button
+              onClick={doAddDriver}
+              disabled={pending}
+              className="w-full sm:w-auto min-h-[44px] px-6 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-60"
+            >
+              Add driver
+            </button>
+          </div>
+
+          {/* Roster list */}
+          <div className="space-y-2">
+            {rosterSorted.length === 0 && <p className="text-sm text-muted">No drivers yet.</p>}
+            {rosterSorted.map((d) => (
+              <div key={d.id} className="bg-background/60 border border-white/5 rounded-xl p-3">
+                <div className="flex items-center gap-3">
+                  <DriverThumb driver={d} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-white truncate">
+                      <span className="font-mono text-xs text-muted mr-2">{d.code}</span>
+                      {d.name}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {d.nationality || "—"}
+                      {d.number != null ? ` · #${d.number}` : ""}
+                      {d.is_active ? "" : " · inactive"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => toggleActive(d)}
+                      disabled={pending}
+                      className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
+                        d.is_active
+                          ? "border-white/10 text-muted hover:text-white"
+                          : "border-green-500/30 text-green-400 hover:bg-green-500/10"
+                      }`}
+                    >
+                      {d.is_active ? "Retire" : "Reactivate"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditId(editId === d.id ? null : d.id);
+                        setEd({
+                          name: d.name,
+                          nationality: d.nationality,
+                          number: d.number != null ? String(d.number) : "",
+                          photo_path: d.photo_path,
+                        });
+                      }}
+                      className="text-xs px-2 py-1 rounded-lg border border-white/10 text-muted hover:text-white"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+
+                {editId === d.id && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <input
+                      placeholder="Full name"
+                      value={ed.name}
+                      onChange={(e) => setEd((f) => ({ ...f, name: e.target.value }))}
+                      className="col-span-2 min-h-[40px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white focus:border-accent focus:outline-none"
+                    />
+                    <input
+                      placeholder="Nationality"
+                      value={ed.nationality}
+                      onChange={(e) => setEd((f) => ({ ...f, nationality: e.target.value }))}
+                      className="min-h-[40px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white focus:border-accent focus:outline-none"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Number"
+                      value={ed.number}
+                      onChange={(e) => setEd((f) => ({ ...f, number: e.target.value }))}
+                      className="min-h-[40px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white focus:border-accent focus:outline-none"
+                    />
+                    <input
+                      placeholder="Photo path or URL"
+                      value={ed.photo_path}
+                      onChange={(e) => setEd((f) => ({ ...f, photo_path: e.target.value }))}
+                      className="col-span-2 min-h-[40px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white focus:border-accent focus:outline-none"
+                    />
+                    <div className="col-span-2 flex gap-2">
+                      <button
+                        onClick={() => saveDriver(d.id)}
+                        disabled={pending}
+                        className="min-h-[40px] px-4 rounded-lg bg-accent text-white text-sm font-medium disabled:opacity-60"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditId(null)}
+                        className="min-h-[40px] px-3 rounded-lg border border-white/10 text-white text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Season default ── */}
+      {view === "season" && (
+        <div className="mt-4 space-y-3">
+          <p className="text-xs text-muted">
+            The <span className="text-white font-medium">normal lineup</span>. Changing a seat here is a
+            permanent swap that applies to every future weekend created from now on.
+          </p>
+          {teams.map((team) => (
+            <div key={team.id} className="bg-background/60 border border-white/5 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-1.5 h-4 rounded-full" style={{ backgroundColor: team.colour }} />
+                <p className="text-sm font-semibold text-white">{team.name}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[1, 2].map((seatNo) => (
+                  <SeatSelect
+                    key={seatNo}
+                    drivers={rosterSorted}
+                    value={seasonSeatValue(team.id, seatNo)}
+                    onChange={(driverId) => setSeasonSeat(team.id, seatNo, driverId)}
+                    disabled={pending}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Per-weekend override ── */}
+      {view === "weekend" && (
+        <div className="mt-4 space-y-3">
+          <p className="text-xs text-muted">
+            A <span className="text-white font-medium">one-off</span> lineup for a single weekend (e.g. an
+            injury replacement). It does not change the season default, and it freezes what the history
+            pages show for that race.
+          </p>
+          <select
+            value={selectedWeekendId}
+            onChange={(e) => setSelectedWeekendId(e.target.value)}
+            className="w-full sm:w-72 min-h-[44px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white focus:border-accent focus:outline-none"
+          >
+            <option value="">Select a race weekend…</option>
+            {[...raceWeekends]
+              .sort((a, b) => a.round - b.round)
+              .map((r) => (
+                <option key={r.id} value={r.id}>
+                  R{r.round} — {r.race_name}
+                </option>
+              ))}
+          </select>
+
+          {selectedWeekend && (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted">
+                  {weekendSeats.some((w) => w.race_weekend_id === selectedWeekend.id)
+                    ? "This weekend has its own grid."
+                    : "Using the season default (no overrides yet)."}
+                </p>
+                <button
+                  onClick={() => doReset(selectedWeekend.id, selectedWeekend.season)}
+                  disabled={pending}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-muted hover:text-white disabled:opacity-60"
+                >
+                  Reset to season default
+                </button>
+              </div>
+              {teams.map((team) => (
+                <div key={team.id} className="bg-background/60 border border-white/5 rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-1.5 h-4 rounded-full" style={{ backgroundColor: team.colour }} />
+                    <p className="text-sm font-semibold text-white">{team.name}</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[1, 2].map((seatNo) => (
+                      <SeatSelect
+                        key={seatNo}
+                        drivers={rosterSorted}
+                        value={weekendSeatValue(selectedWeekend.id, team.id, seatNo)}
+                        onChange={(driverId) =>
+                          setWeekendSeat(selectedWeekend.id, selectedWeekend.season, team.id, seatNo, driverId)
+                        }
+                        disabled={pending}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Root AdminClient ──────────────────────────────────────────────────────────
 
 export default function AdminClient({
@@ -557,12 +1090,18 @@ export default function AdminClient({
   profiles,
   predictions,
   scores,
+  teams,
+  drivers,
+  seasonSeats,
+  weekendDrivers,
+  season,
 }: AdminClientProps) {
   const [tab, setTab] = useState<Tab>("whitelist");
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "whitelist", label: "Whitelist" },
     { id: "races", label: "Race Weekends" },
+    { id: "lineups", label: "Lineups" },
     { id: "scoring", label: "Score Results" },
   ];
 
@@ -589,6 +1128,16 @@ export default function AdminClient({
       <div className="bg-surface rounded-2xl border border-white/5 p-5">
         {tab === "whitelist" && <WhitelistSection initial={whitelist} />}
         {tab === "races" && <RaceSection initial={raceWeekends} />}
+        {tab === "lineups" && (
+          <LineupsSection
+            teams={teams}
+            drivers={drivers}
+            seasonSeats={seasonSeats}
+            weekendDrivers={weekendDrivers}
+            raceWeekends={raceWeekends}
+            season={season}
+          />
+        )}
         {tab === "scoring" && (
           <ScoringSection
             raceWeekends={raceWeekends}

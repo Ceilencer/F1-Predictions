@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { SEASON } from "@/config/calendar";
 import AdminClient from "./AdminClient";
 import SyncButton from "./SyncButton";
 
@@ -25,12 +26,20 @@ export default async function AdminPage() {
     { data: profiles },
     { data: predictions },
     { data: scores },
+    { data: teams },
+    { data: drivers },
+    { data: seasonSeats },
+    { data: weekendDrivers },
   ] = await Promise.all([
     supabase.from("whitelisted_emails").select("*").order("created_at", { ascending: false }),
     supabase.from("race_weekends").select("*").order("round", { ascending: false }),
     supabase.from("profiles").select("*"),
     supabase.from("predictions").select("*"),
     supabase.from("scores").select("*"),
+    supabase.from("teams").select("*").order("sort_order", { ascending: true }),
+    supabase.from("drivers").select("*"),
+    supabase.from("season_seats").select("*").eq("season", SEASON),
+    supabase.from("race_weekend_drivers").select("*"),
   ]);
 
   // Auto-detect the race to sync: earliest unsynced race whose qualifying
@@ -54,6 +63,11 @@ export default async function AdminPage() {
         profiles={profiles ?? []}
         predictions={predictions ?? []}
         scores={scores ?? []}
+        teams={teams ?? []}
+        drivers={drivers ?? []}
+        seasonSeats={seasonSeats ?? []}
+        weekendDrivers={weekendDrivers ?? []}
+        season={SEASON}
       />
     </div>
   );

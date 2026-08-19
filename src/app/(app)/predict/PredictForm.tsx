@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import DriverPickerModal from "@/components/DriverPickerModal";
 import { submitPredictions } from "./actions";
 import type { Database } from "@/lib/supabase/database.types";
+import type { DriverMap, TeamMap, GridTeamWithDrivers } from "@/lib/grid-types";
 
 type RaceWeekend = Database["public"]["Tables"]["race_weekends"]["Row"];
 type Prediction = Database["public"]["Tables"]["predictions"]["Row"];
@@ -16,6 +17,10 @@ interface PredictFormProps {
   predictionsOpenAt: string | null;
   /** Server-computed gate: true if predictions aren't open yet */
   notOpenYet: boolean;
+  /** This weekend's grid + lookups, resolved server-side. */
+  grid: GridTeamWithDrivers[];
+  driverMap: DriverMap;
+  teamMap: TeamMap;
 }
 
 interface FormState {
@@ -43,7 +48,9 @@ function FieldCard({ label, description, children }: { label: string; descriptio
   );
 }
 
-export default function PredictForm({ raceWeekend, existing, isLocked, predictionsOpenAt, notOpenYet }: PredictFormProps) {
+export default function PredictForm({ raceWeekend, existing, isLocked, predictionsOpenAt, notOpenYet, grid, driverMap, teamMap }: PredictFormProps) {
+  // Shared grid data every driver/team picker needs.
+  const pickerProps = { grid, driverMap, teamMap };
   const [form, setForm] = useState<FormState>({
     pole_position:    existing?.pole_position    ?? "",
     top3_p1:          existing?.top3_p1          ?? "",
@@ -178,6 +185,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
           value={form.pole_position}
           onChange={set("pole_position")}
           disabled={locked}
+          {...pickerProps}
         />
       </FieldCard>
 
@@ -189,6 +197,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
               value={form.sprint_pole}
               onChange={set("sprint_pole")}
               disabled={locked}
+              {...pickerProps}
             />
           </FieldCard>
 
@@ -197,6 +206,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
               value={form.sprint_winner}
               onChange={set("sprint_winner")}
               disabled={locked}
+              {...pickerProps}
             />
           </FieldCard>
         </>
@@ -208,6 +218,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
           value={form.top3_p1}
           onChange={set("top3_p1")}
           disabled={locked}
+          {...pickerProps}
         />
       </FieldCard>
 
@@ -217,6 +228,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
           value={form.top3_p2}
           onChange={set("top3_p2")}
           disabled={locked}
+          {...pickerProps}
         />
       </FieldCard>
 
@@ -226,6 +238,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
           value={form.top3_p3}
           onChange={set("top3_p3")}
           disabled={locked}
+          {...pickerProps}
         />
       </FieldCard>
 
@@ -239,6 +252,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
           onChange={set("biggest_surprise")}
           disabled={locked}
           allowTeams
+          {...pickerProps}
         />
       </FieldCard>
 
@@ -252,6 +266,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
           onChange={set("biggest_flop")}
           disabled={locked}
           allowTeams
+          {...pickerProps}
         />
       </FieldCard>
 
@@ -270,6 +285,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
           value={form.p_what_driver}
           onChange={set("p_what_driver")}
           disabled={locked}
+          {...pickerProps}
         />
       </FieldCard>
 
