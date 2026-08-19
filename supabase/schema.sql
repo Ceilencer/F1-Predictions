@@ -105,26 +105,58 @@ CREATE TABLE IF NOT EXISTS public.scores (
   flop_correct     BOOLEAN,          -- NULL until admin judges
   crazy_correct    BOOLEAN,          -- NULL until admin judges
   p_what_correct   BOOLEAN  NOT NULL DEFAULT FALSE,
+  sprint_pole_correct   BOOLEAN,     -- sprint weekends only; NULL otherwise
+  sprint_winner_correct BOOLEAN,     -- sprint weekends only; NULL otherwise
   total_points     INTEGER  NOT NULL DEFAULT 0,
   UNIQUE (user_id, race_weekend_id)
 );
 
 -- ────────────────────────────────────────────────────────────
 -- TRIGGER: auto-compute total_points on scores INSERT/UPDATE
--- Counts each TRUE boolean, treating NULL as FALSE.
+-- Each correct category is worth 1 point, EXCEPT Biggest Surprise / Biggest
+-- Flop: a correct pick is worth 2 points if a TEAM was chosen, or 1 point if a
+-- driver was chosen. (Whether the pick was a team is determined by looking up
+-- the player's prediction and checking it against teams.key.)
+-- NULL booleans are treated as FALSE.
 -- ────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.compute_total_points()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+  v_surprise   TEXT;
+  v_flop       TEXT;
+  surprise_pts INT := 0;
+  flop_pts     INT := 0;
 BEGIN
+  -- The player's Surprise / Flop picks, so we can tell team (2) from driver (1).
+  SELECT biggest_surprise, biggest_flop
+    INTO v_surprise, v_flop
+    FROM public.predictions
+   WHERE user_id = NEW.user_id
+     AND race_weekend_id = NEW.race_weekend_id;
+
+  IF COALESCE(NEW.surprise_correct, FALSE) THEN
+    surprise_pts := CASE
+      WHEN v_surprise IS NOT NULL AND EXISTS (SELECT 1 FROM public.teams WHERE key = v_surprise)
+      THEN 2 ELSE 1 END;
+  END IF;
+
+  IF COALESCE(NEW.flop_correct, FALSE) THEN
+    flop_pts := CASE
+      WHEN v_flop IS NOT NULL AND EXISTS (SELECT 1 FROM public.teams WHERE key = v_flop)
+      THEN 2 ELSE 1 END;
+  END IF;
+
   NEW.total_points :=
     (NEW.pole_correct::int) +
     (NEW.top3_p1_correct::int) +
     (NEW.top3_p2_correct::int) +
     (NEW.top3_p3_correct::int) +
-    (COALESCE(NEW.surprise_correct, FALSE)::int) +
-    (COALESCE(NEW.flop_correct, FALSE)::int) +
+    surprise_pts +
+    flop_pts +
     (COALESCE(NEW.crazy_correct, FALSE)::int) +
-    (NEW.p_what_correct::int);
+    (NEW.p_what_correct::int) +
+    (COALESCE(NEW.sprint_pole_correct, FALSE)::int) +
+    (COALESCE(NEW.sprint_winner_correct, FALSE)::int);
   RETURN NEW;
 END;
 $$;

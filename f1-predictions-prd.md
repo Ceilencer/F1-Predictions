@@ -54,12 +54,12 @@ Simple right/wrong — 1 point per correct prediction.
 | Top 3 — P1 | Driver matches actual P1 finisher |
 | Top 3 — P2 | Driver matches actual P2 finisher |
 | Top 3 — P3 | Driver matches actual P3 finisher |
-| Biggest Good Surprise | Subjective — admin marks correct/incorrect |
-| Biggest Flop | Subjective — admin marks correct/incorrect |
+| Biggest Good Surprise | Subjective — admin marks correct/incorrect. Worth **2 points if a team was picked**, 1 point if a driver was picked. |
+| Biggest Flop | Subjective — admin marks correct/incorrect. Worth **2 points if a team was picked**, 1 point if a driver was picked. |
 | One Crazy Prediction | Subjective — admin marks correct/incorrect |
 | P What? | Two-tier scoring: (1) If any user correctly predicted the driver who finished in the generated position, they score the point — shared equally if multiple users picked the same correct driver. (2) If nobody predicted the correct driver, the point goes to whoever's predicted driver finished closest to the generated position (by absolute position difference). If multiple users are tied for closest, they share the point. |
 
-Maximum points per race weekend: **8**
+Maximum points per race weekend: **10** on a standard weekend (if both Surprise and Flop are correct team picks), plus 2 more on sprint weekends (sprint pole + sprint winner).
 
 ---
 
