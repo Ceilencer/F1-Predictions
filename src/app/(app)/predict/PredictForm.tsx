@@ -245,7 +245,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
       {/* Biggest Good Surprise — driver or team */}
       <FieldCard
         label="Biggest Good Surprise"
-        description="Pick a driver or a team who will overperform expectations."
+        description="Pick a driver or a team who will overperform expectations. A correct team pick scores 2 points; a driver scores 1."
       >
         <DriverPickerModal
           value={form.biggest_surprise}
@@ -259,7 +259,7 @@ export default function PredictForm({ raceWeekend, existing, isLocked, predictio
       {/* Biggest Flop — driver or team */}
       <FieldCard
         label="Biggest Flop"
-        description="Pick a driver or a team who will underperform expectations."
+        description="Pick a driver or a team who will underperform expectations. A correct team pick scores 2 points; a driver scores 1."
       >
         <DriverPickerModal
           value={form.biggest_flop}
