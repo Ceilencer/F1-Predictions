@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { TEAMS, getDriverByCode, getTeamByShortName } from "@/config/drivers";
-import type { Team } from "@/config/drivers";
+import { resolveDriver, resolveTeam } from "@/lib/grid-types";
+import type { DriverMap, TeamMap, GridTeamWithDrivers } from "@/lib/grid-types";
 
 interface DriverPickerModalProps {
   value: string;
@@ -12,6 +12,12 @@ interface DriverPickerModalProps {
   /** When true, teams can be selected in addition to drivers (for Surprise / Flop fields) */
   allowTeams?: boolean;
   placeholder?: string;
+  /** This weekend's grid (teams + their seated drivers), in team order. */
+  grid: GridTeamWithDrivers[];
+  /** code → driver lookup for rendering the current selection. */
+  driverMap: DriverMap;
+  /** key → team lookup for rendering the current team selection. */
+  teamMap: TeamMap;
 }
 
 export default function DriverPickerModal({
@@ -20,9 +26,12 @@ export default function DriverPickerModal({
   disabled = false,
   allowTeams = false,
   placeholder,
+  grid,
+  driverMap,
+  teamMap,
 }: DriverPickerModalProps) {
   const [open, setOpen] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<GridTeamWithDrivers | null>(null);
 
   const defaultPlaceholder = allowTeams ? "Select a driver or team…" : "Select a driver…";
 
@@ -59,8 +68,9 @@ export default function DriverPickerModal({
     closeModal();
   }
 
-  const driver = value ? getDriverByCode(value) : null;
-  const team   = !driver && value ? getTeamByShortName(value) : null;
+  const driver = resolveDriver(driverMap, value);
+  const team   = !driver ? resolveTeam(teamMap, value) : null;
+  const driverColour = driver?.team?.colour ?? "#9ca3af";
 
   return (
     <>
@@ -81,7 +91,7 @@ export default function DriverPickerModal({
           <>
             <div
               className="relative h-8 w-8 rounded-full overflow-hidden shrink-0"
-              style={{ background: driver.team.colour + "33" }}
+              style={{ background: driverColour + "33" }}
             >
               <Image
                 src={driver.photoPath}
@@ -94,7 +104,7 @@ export default function DriverPickerModal({
             </div>
             <span
               className="px-1.5 py-0.5 rounded text-xs font-bold tracking-wide shrink-0"
-              style={{ background: driver.team.colour + "33", color: driver.team.colour }}
+              style={{ background: driverColour + "33", color: driverColour }}
             >
               {driver.code}
             </span>
@@ -164,7 +174,7 @@ export default function DriverPickerModal({
               {selectedTeam ? (
                 <DriverPanel team={selectedTeam} allowTeams={allowTeams} onPick={pick} />
               ) : (
-                <TeamGrid onSelect={setSelectedTeam} />
+                <TeamGrid teams={grid} onSelect={setSelectedTeam} />
               )}
             </div>
           </div>
@@ -176,10 +186,16 @@ export default function DriverPickerModal({
 
 // ── Team grid (step 1) ────────────────────────────────────────────────────────
 
-function TeamGrid({ onSelect }: { onSelect: (t: Team) => void }) {
+function TeamGrid({
+  teams,
+  onSelect,
+}: {
+  teams: GridTeamWithDrivers[];
+  onSelect: (t: GridTeamWithDrivers) => void;
+}) {
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-      {TEAMS.map((team) => (
+      {teams.map((team) => (
         <button
           key={team.shortName}
           type="button"
@@ -215,7 +231,7 @@ function DriverPanel({
   allowTeams,
   onPick,
 }: {
-  team: Team;
+  team: GridTeamWithDrivers;
   allowTeams: boolean;
   onPick: (v: string) => void;
 }) {

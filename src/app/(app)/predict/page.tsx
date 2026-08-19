@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getWeekendGrid, getWeekendDriverMap, getTeamMap } from "@/lib/grid";
 import PredictForm from "./PredictForm";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,15 @@ export default async function PredictPage() {
     ? now > new Date(raceWeekend.qualifying_deadline)
     : true;
 
+  // This weekend's grid + lookups (snapshot, falling back to the season default).
+  const [grid, driverMap, teamMap] = raceWeekend
+    ? await Promise.all([
+        getWeekendGrid(raceWeekend.id),
+        getWeekendDriverMap(raceWeekend.id),
+        getTeamMap(),
+      ])
+    : [[], {}, {}];
+
   return (
     <div className="max-w-xl mx-auto">
       <h1 className="text-2xl font-bold text-white mb-6">Predictions</h1>
@@ -87,6 +97,9 @@ export default async function PredictPage() {
           isLocked={isLocked}
           predictionsOpenAt={predictionsOpenAt}
           notOpenYet={notOpenYet}
+          grid={grid}
+          driverMap={driverMap}
+          teamMap={teamMap}
         />
       )}
     </div>

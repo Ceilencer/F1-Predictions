@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { getDriverByCode, getTeamByShortName } from "@/config/drivers";
+import { resolveDriver, resolveTeam } from "@/lib/grid-types";
+import type { DriverMap, TeamMap } from "@/lib/grid-types";
 
 interface PredictionCardProps {
   displayName: string;
@@ -7,6 +8,8 @@ interface PredictionCardProps {
   pWhatPosition: number;
   isOwn?: boolean;
   isSprint?: boolean;
+  driverMap: DriverMap;
+  teamMap: TeamMap;
   pole_position: string;
   top3_p1: string;
   top3_p2: string;
@@ -19,9 +22,20 @@ interface PredictionCardProps {
   sprint_winner?: string | null;
 }
 
-function PickRow({ label, value }: { label: string; value: string }) {
-  const driver = getDriverByCode(value);
-  const team = !driver ? getTeamByShortName(value) : null;
+function PickRow({
+  label,
+  value,
+  driverMap,
+  teamMap,
+}: {
+  label: string;
+  value: string;
+  driverMap: DriverMap;
+  teamMap: TeamMap;
+}) {
+  const driver = resolveDriver(driverMap, value);
+  const team = !driver ? resolveTeam(teamMap, value) : null;
+  const driverColour = driver?.team?.colour ?? "#9ca3af";
 
   return (
     <div className="flex items-center gap-2 py-1.5 border-b border-white/5 last:border-0 min-w-0">
@@ -32,7 +46,7 @@ function PickRow({ label, value }: { label: string; value: string }) {
         <>
           <div
             className="relative h-6 w-6 rounded-full overflow-hidden shrink-0"
-            style={{ background: driver.team.colour + "33" }}
+            style={{ background: driverColour + "33" }}
           >
             <Image
               src={driver.photoPath}
@@ -45,7 +59,7 @@ function PickRow({ label, value }: { label: string; value: string }) {
           </div>
           <span
             className="text-[11px] font-bold tracking-wide shrink-0"
-            style={{ color: driver.team.colour }}
+            style={{ color: driverColour }}
           >
             {driver.code}
           </span>
@@ -78,6 +92,8 @@ export default function PredictionCard({
   pWhatPosition,
   isOwn = false,
   isSprint = false,
+  driverMap,
+  teamMap,
   pole_position,
   top3_p1,
   top3_p2,
@@ -119,17 +135,17 @@ export default function PredictionCard({
       <div className="px-4 py-2">
         {isSprint && (
           <>
-            <PickRow label="Spr Pole" value={sprint_pole   ?? ""} />
-            <PickRow label="Spr Win"  value={sprint_winner ?? ""} />
+            <PickRow label="Spr Pole" value={sprint_pole   ?? ""} driverMap={driverMap} teamMap={teamMap} />
+            <PickRow label="Spr Win"  value={sprint_winner ?? ""} driverMap={driverMap} teamMap={teamMap} />
           </>
         )}
-        <PickRow label="Pole"    value={pole_position}    />
-        <PickRow label="P1"      value={top3_p1}          />
-        <PickRow label="P2"      value={top3_p2}          />
-        <PickRow label="P3"      value={top3_p3}          />
-        <PickRow label="Surprise" value={biggest_surprise} />
-        <PickRow label="Flop"    value={biggest_flop}     />
-        <PickRow label={`P${pWhatPosition}?`} value={p_what_driver} />
+        <PickRow label="Pole"    value={pole_position}    driverMap={driverMap} teamMap={teamMap} />
+        <PickRow label="P1"      value={top3_p1}          driverMap={driverMap} teamMap={teamMap} />
+        <PickRow label="P2"      value={top3_p2}          driverMap={driverMap} teamMap={teamMap} />
+        <PickRow label="P3"      value={top3_p3}          driverMap={driverMap} teamMap={teamMap} />
+        <PickRow label="Surprise" value={biggest_surprise} driverMap={driverMap} teamMap={teamMap} />
+        <PickRow label="Flop"    value={biggest_flop}     driverMap={driverMap} teamMap={teamMap} />
+        <PickRow label={`P${pWhatPosition}?`} value={p_what_driver} driverMap={driverMap} teamMap={teamMap} />
       </div>
 
       {/* Crazy prediction */}

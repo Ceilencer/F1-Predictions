@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getWeekendDriverMap, getTeamMap } from "@/lib/grid";
 import Countdown from "@/components/Countdown";
 import PredictionCard from "@/components/PredictionCard";
 
@@ -79,6 +80,11 @@ export default async function DashboardPage() {
 
   const hasSubmitted = !!ownPred;
   const canViewPredictions = hasSubmitted || isLocked;
+
+  // Grid lookups for rendering prediction cards (this weekend's frozen grid).
+  const [driverMap, teamMap] = currentRace
+    ? await Promise.all([getWeekendDriverMap(currentRace.id), getTeamMap()])
+    : [{}, {}];
 
   // Build profile map from already-fetched profiles
   const profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
@@ -235,6 +241,8 @@ export default async function DashboardPage() {
                   pWhatPosition={currentRace.p_what_position}
                   isOwn={prediction.user_id === user.id}
                   isSprint={currentRace.is_sprint_weekend}
+                  driverMap={driverMap}
+                  teamMap={teamMap}
                   pole_position={prediction.pole_position}
                   top3_p1={prediction.top3_p1}
                   top3_p2={prediction.top3_p2}

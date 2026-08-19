@@ -3,23 +3,17 @@
  * F1 Predictions — 2026 Driver & Team Configuration
  * ============================================================
  *
- * This is the SINGLE SOURCE OF TRUTH for all driver and team data in the app.
- * It is used to populate dropdown menus, display names, and team logos everywhere.
+ * This file is the ONE-TIME SEED for the driver/team grid.
  *
- * HOW TO MAKE CHANGES (no coding knowledge required):
- * ─────────────────────────────────────────────────────
- *  • To update a driver's name:   change the `name` field in their entry below.
- *  • To update a driver's code:   change the `code` field (must be 3 capital letters).
- *  • To swap a driver mid-season: find their team's entry and replace the driver
- *    object entirely with the new driver's details (name, code, nationality, number).
- *  • To change a team name:       update the `name` and/or `shortName` fields.
- *  • To update a team logo:       swap the SVG file in public/teams/ — keep the same
- *    filename, or update the `logoPath` here to match the new filename.
- *  • To add a new team:           copy any existing team block and edit all fields,
- *    then add it to the TEAMS array below.
+ * ⚠️  The live source of truth is now the DATABASE, edited from the admin panel
+ *     ("Lineups" tab): the roster, the season-default lineup, and per-weekend
+ *     one-off overrides all live there. Day-to-day driver swaps should be made
+ *     in the app, NOT here.
  *
- * After saving, the app picks up changes on the next page load.
- * No database migrations or code changes are required anywhere else.
+ * This file is only used by the admin "Seed grid from config" button, which
+ * loads the teams/drivers/season-default below into the database the first time
+ * (and can be re-run to top it up — it never deletes anything). Edit it only if
+ * you want to change that initial seed payload.
  * ============================================================
  *
  * NOTE — 2026 grid accuracy:
@@ -195,27 +189,6 @@ export const TEAMS: Team[] = [
   },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Derived helpers — computed automatically from TEAMS above. Do not edit.
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Flat list of all drivers, sorted alphabetically by surname. */
-export const ALL_DRIVERS: (Driver & { team: Team })[] = TEAMS.flatMap(
-  (team) => team.drivers.map((driver) => ({ ...driver, team }))
-).sort((a, b) => {
-  const surnameA = a.name.split(" ").at(-1) ?? a.name;
-  const surnameB = b.name.split(" ").at(-1) ?? b.name;
-  return surnameA.localeCompare(surnameB);
-});
-
-/** Look up a driver by their 3-letter code. Returns undefined if not found. */
-export function getDriverByCode(
-  code: string
-): (Driver & { team: Team }) | undefined {
-  return ALL_DRIVERS.find((d) => d.code === code);
-}
-
-/** Look up a team by its short name. Returns undefined if not found. */
-export function getTeamByShortName(shortName: string): Team | undefined {
-  return TEAMS.find((t) => t.shortName === shortName);
-}
+// Runtime lookups now live in the database — see `src/lib/grid.ts`
+// (getWeekendGrid / getWeekendDriverMap / getTeamMap). This file only provides
+// the TEAMS seed payload above and the Driver / Team types.

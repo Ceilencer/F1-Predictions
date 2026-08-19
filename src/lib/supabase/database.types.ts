@@ -204,6 +204,120 @@ export interface Database {
         };
         Relationships: [];
       };
+      teams: {
+        Row: {
+          id: string;
+          key: string;
+          name: string;
+          logo_path: string;
+          colour: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          key: string;
+          name: string;
+          logo_path?: string;
+          colour?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          key?: string;
+          name?: string;
+          logo_path?: string;
+          colour?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      drivers: {
+        Row: {
+          id: string;
+          code: string;
+          name: string;
+          nationality: string;
+          number: number | null;
+          photo_path: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          name: string;
+          nationality?: string;
+          number?: number | null;
+          photo_path?: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          name?: string;
+          nationality?: string;
+          number?: number | null;
+          photo_path?: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      season_seats: {
+        Row: {
+          id: string;
+          season: number;
+          team_id: string;
+          seat_no: number;
+          driver_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          season: number;
+          team_id: string;
+          seat_no: number;
+          driver_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          season?: number;
+          team_id?: string;
+          seat_no?: number;
+          driver_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      race_weekend_drivers: {
+        Row: {
+          id: string;
+          race_weekend_id: string;
+          team_id: string;
+          seat_no: number;
+          driver_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          race_weekend_id: string;
+          team_id: string;
+          seat_no: number;
+          driver_id?: string | null;
+        };
+        Update: {
+          id?: string;
+          race_weekend_id?: string;
+          team_id?: string;
+          seat_no?: number;
+          driver_id?: string | null;
+        };
+        Relationships: [];
+      };
       scores: {
         Row: {
           id: string;
