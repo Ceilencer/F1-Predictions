@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
   addWhitelistedEmail,
   removeWhitelistedEmail,
   createRaceWeekend,
+  deleteRaceWeekend,
   updateRaceDeadline,
   updateSubjectiveScore,
   seedFromCalendar,
@@ -170,35 +171,51 @@ function WhitelistSection({
 
 function RaceSection({ initial }: { initial: RaceWeekend[] }) {
   const [races, setRaces] = useState(initial);
-  const [form, setForm] = useState({
+  // Pick up server-side changes (e.g. rounds shifted by a mid-season insert).
+  useEffect(() => setRaces(initial), [initial]);
+  const emptyForm = {
     race_name: "",
     round: "",
     season: new Date().getFullYear().toString(),
     qualifying_deadline: "",
-  });
+    race_start: "",
+  };
+  const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [editDeadline, setEditDeadline] = useState("");
   const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
 
   function createRace() {
-    if (!form.race_name || !form.round || !form.season || !form.qualifying_deadline) {
+    if (!form.race_name || !form.round || !form.season || !form.qualifying_deadline || !form.race_start) {
       setMsg({ text: "All fields are required.", error: true });
+      return;
+    }
+    const round = parseInt(form.round);
+    const season = parseInt(form.season);
+    const later = races.filter((r) => r.season === season && r.round >= round).length;
+    if (
+      later > 0 &&
+      !confirm(
+        `Round ${round} already exists. Insert "${form.race_name}" as round ${round} and move ${later} later race${later !== 1 ? "s" : ""} back one round?`
+      )
+    ) {
       return;
     }
     startTransition(async () => {
       const res = await createRaceWeekend({
         race_name: form.race_name,
-        round: parseInt(form.round),
-        season: parseInt(form.season),
+        round,
+        season,
         qualifying_deadline: new Date(form.qualifying_deadline).toISOString(),
+        race_start: new Date(form.race_start).toISOString(),
       });
       if (res.error) {
         setMsg({ text: res.error, error: true });
       } else {
-        setMsg({ text: `Race created! P What? position: P${res.p_what_position}` });
-        setForm({ race_name: "", round: "", season: new Date().getFullYear().toString(), qualifying_deadline: "" });
-        // Optimistically add to list — page will revalidate on next nav
+        const shifted = res.shifted ? ` Rounds ${round}+ moved back by one (${res.shifted} race${res.shifted !== 1 ? "s" : ""}).` : "";
+        setMsg({ text: `Race created! P What? position: P${res.p_what_position}.${shifted}` });
+        setForm(emptyForm);
       }
     });
   }
@@ -220,15 +237,39 @@ function RaceSection({ initial }: { initial: RaceWeekend[] }) {
     });
   }
 
+  function removeRace(r: RaceWeekend) {
+    if (
+      !confirm(
+        `Delete "${r.race_name}" (Round ${r.round}, ${r.season})? This also deletes every prediction, score and result for it. This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    startTransition(async () => {
+      const res = await deleteRaceWeekend(r.id);
+      if (res.error) {
+        setMsg({ text: res.error, error: true });
+      } else {
+        setRaces((prev) => prev.filter((x) => x.id !== r.id));
+        setMsg({ text: `Deleted ${r.race_name}.` });
+      }
+    });
+  }
+
   function seed() {
     startTransition(async () => {
       const res = await seedFromCalendar();
       if (res.error) {
         setMsg({ text: res.error, error: true });
-      } else if (res.created === 0) {
-        setMsg({ text: `All 2026 races updated (${res.updated} in DB).` });
       } else {
-        setMsg({ text: `Seeded ${res.created} new race${res.created !== 1 ? "s" : ""} and updated ${res.updated} existing from the 2026 calendar.` });
+        const base =
+          res.created === 0
+            ? `All 2026 races updated (${res.updated} in DB).`
+            : `Seeded ${res.created} new race${res.created !== 1 ? "s" : ""} and updated ${res.updated} existing from the 2026 calendar.`;
+        const skipped = res.skipped?.length
+          ? ` Skipped rounds held by a different race: ${res.skipped.join("; ")}.`
+          : "";
+        setMsg({ text: base + skipped, error: !!res.skipped?.length });
       }
     });
   }
@@ -242,7 +283,7 @@ function RaceSection({ initial }: { initial: RaceWeekend[] }) {
         <div className="flex-1">
           <p className="text-sm font-medium text-white">Seed 2026 season from calendar</p>
           <p className="text-xs text-muted mt-0.5">
-            Creates all 24 race weekends at once. Skips any that already exist. P What? positions are randomly assigned.
+            Creates any missing race weekends and refreshes session times for existing ones. Rounds held by a different race are left untouched. P What? positions are randomly assigned.
           </p>
         </div>
         <button
@@ -278,12 +319,21 @@ function RaceSection({ initial }: { initial: RaceWeekend[] }) {
             onChange={(e) => setForm((f) => ({ ...f, season: e.target.value }))}
             className="min-h-[44px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white placeholder:text-muted focus:border-accent focus:outline-none"
           />
-          <div className="col-span-full">
+          <div>
             <label className="text-xs text-muted mb-1 block">Qualifying deadline (predictions lock at this time)</label>
             <input
               type="datetime-local"
               value={form.qualifying_deadline}
               onChange={(e) => setForm((f) => ({ ...f, qualifying_deadline: e.target.value }))}
+              className="w-full min-h-[44px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white focus:border-accent focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted mb-1 block">Race start (orders the season and triggers results sync)</label>
+            <input
+              type="datetime-local"
+              value={form.race_start}
+              onChange={(e) => setForm((f) => ({ ...f, race_start: e.target.value }))}
               className="w-full min-h-[44px] px-3 py-2 rounded-lg text-sm bg-background border border-white/10 text-white focus:border-accent focus:outline-none"
             />
           </div>
@@ -295,7 +345,10 @@ function RaceSection({ initial }: { initial: RaceWeekend[] }) {
         >
           Create race weekend
         </button>
-        <p className="text-xs text-muted">The P What? position is generated randomly (P4–P22) when you click Create.</p>
+        <p className="text-xs text-muted">
+          The P What? position is generated randomly (P4–P22) when you click Create. Using a round that already
+          exists inserts the race there and moves every later round back by one.
+        </p>
       </div>
 
       {msg && <Feedback msg={msg.text} isError={msg.error} />}
@@ -338,6 +391,13 @@ function RaceSection({ initial }: { initial: RaceWeekend[] }) {
                   className="text-xs text-muted hover:text-white"
                 >
                   Edit deadline
+                </button>
+                <button
+                  onClick={() => removeRace(r)}
+                  disabled={pending}
+                  className="text-xs text-red-400 hover:text-red-300 disabled:opacity-60"
+                >
+                  Delete
                 </button>
               </div>
             </div>

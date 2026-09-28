@@ -68,9 +68,34 @@ export async function createRaceWeekend(data: {
   round: number;
   season: number;
   qualifying_deadline: string;
-}): Promise<{ error?: string; success?: true; p_what_position?: number }> {
+  race_start: string;
+}): Promise<{ error?: string; success?: true; p_what_position?: number; shifted?: number }> {
   const { error: authError, supabase } = await requireAdmin();
   if (authError || !supabase) return { error: authError ?? "Unknown error." };
+
+  const round = Number(data.round);
+  const season = Number(data.season);
+  if (!Number.isInteger(round) || round < 1) return { error: "Round must be a positive whole number." };
+
+  // Inserting mid-season: bump every later round up by one to make room.
+  // Updated highest-first so the (season, round) unique constraint never
+  // sees two rows on the same round, even if a step fails part-way.
+  const { data: later, error: laterError } = await supabase
+    .from("race_weekends")
+    .select("id, round")
+    .eq("season", season)
+    .gte("round", round)
+    .order("round", { ascending: false });
+
+  if (laterError) return { error: laterError.message };
+
+  for (const r of later ?? []) {
+    const { error } = await supabase
+      .from("race_weekends")
+      .update({ round: r.round + 1 })
+      .eq("id", r.id);
+    if (error) return { error: `Failed to shift round ${r.round}: ${error.message}` };
+  }
 
   // Random position between 4 and 22 inclusive
   const p_what_position = Math.floor(Math.random() * 19) + 4;
@@ -78,9 +103,11 @@ export async function createRaceWeekend(data: {
   const { data: created, error } = await supabase
     .from("race_weekends")
     .insert({
-      ...data,
-      round: Number(data.round),
-      season: Number(data.season),
+      race_name: data.race_name,
+      round,
+      season,
+      qualifying_deadline: data.qualifying_deadline,
+      race_start: data.race_start,
       p_what_position,
       results_synced: false,
     })
@@ -97,7 +124,26 @@ export async function createRaceWeekend(data: {
 
   revalidatePath("/admin");
   revalidatePath("/");
-  return { success: true, p_what_position };
+  return { success: true, p_what_position, shifted: later?.length ?? 0 };
+}
+
+export async function deleteRaceWeekend(
+  id: string
+): Promise<{ error?: string; success?: true }> {
+  const { error: authError } = await requireAdmin();
+  if (authError) return { error: authError };
+
+  // No delete RLS policy on race_weekends, so use the service-role client.
+  // Predictions, scores, results and grid rows cascade with it.
+  const { error } = await createAdminClient()
+    .from("race_weekends")
+    .delete()
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return { success: true };
 }
 
 export async function updateRaceDeadline(
@@ -124,6 +170,7 @@ export async function seedFromCalendar(): Promise<{
   error?: string;
   created?: number;
   updated?: number;
+  skipped?: string[];
 }> {
   const { error: authError, supabase } = await requireAdmin();
   if (authError || !supabase) return { error: authError ?? "Unknown error." };
@@ -131,13 +178,23 @@ export async function seedFromCalendar(): Promise<{
   // Fetch existing rows to preserve p_what_position and results_synced
   const { data: existing } = await supabase
     .from("race_weekends")
-    .select("round, p_what_position, results_synced")
+    .select("round, race_name, p_what_position, results_synced")
     .eq("season", SEASON);
 
   const existingMap = new Map((existing ?? []).map((r) => [r.round, r]));
 
+  // A round held by a different race (e.g. rounds shifted by a mid-season
+  // addition) is skipped rather than overwritten with the wrong race.
+  const skipped = CALENDAR_2026.filter((r) => {
+    const ex = existingMap.get(r.round);
+    return ex && ex.race_name !== r.race_name;
+  }).map((r) => `R${r.round} ${r.race_name} (DB has ${existingMap.get(r.round)!.race_name})`);
+
   // Build upsert payload: new rows get a random position; existing rows keep theirs
-  const rows = CALENDAR_2026.map((r) => {
+  const rows = CALENDAR_2026.filter((r) => {
+    const ex = existingMap.get(r.round);
+    return !ex || ex.race_name === r.race_name;
+  }).map((r) => {
     const ex = existingMap.get(r.round);
     return {
       season: SEASON,
@@ -177,7 +234,7 @@ export async function seedFromCalendar(): Promise<{
 
   const created = rows.filter((r) => !existingMap.has(r.round)).length;
   const updated = rows.filter((r) => existingMap.has(r.round)).length;
-  return { created, updated };
+  return { created, updated, skipped };
 }
 
 // ── subjective scoring ────────────────────────────────────────────────────────

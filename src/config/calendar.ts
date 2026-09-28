@@ -294,8 +294,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     race_start:          "2026-09-26T11:00:00Z", // Sat 26 Sep 06:00 CDT
   },
   // ── Round 16 ─────────────────────────────────────────────────────────────
+  // Bahrain (Malaysian) GP — added mid-season via Admin → "Add a race weekend".
+  // Not listed here: seeding leaves rounds held by a different race untouched.
+  // ── Round 17 ─────────────────────────────────────────────────────────────
   {
-    round: 16,
+    round: 17,
     race_name: "Singapore Grand Prix",
     circuit: "Marina Bay Street Circuit",
     country: "Singapore",
@@ -306,9 +309,9 @@ export const CALENDAR_2026: CalendarRace[] = [
     qualifying_deadline:      "2026-10-09T12:30:00Z", // = sprint_qualifying_start (locks before any competitive session)
     race_start:               "2026-10-11T12:00:00Z", // Sun 11 Oct 07:00 CDT
   },
-  // ── Round 17 ─────────────────────────────────────────────────────────────
+  // ── Round 18 ─────────────────────────────────────────────────────────────
   {
-    round: 17,
+    round: 18,
     race_name: "United States Grand Prix",
     circuit: "Circuit of the Americas",
     country: "United States",
@@ -318,9 +321,9 @@ export const CALENDAR_2026: CalendarRace[] = [
     qualifying_deadline: "2026-10-24T21:00:00Z", // Sat 24 Oct 16:00 CDT — predictions lock
     race_start:          "2026-10-25T20:00:00Z", // Sun 25 Oct 15:00 CDT
   },
-  // ── Round 18 ─────────────────────────────────────────────────────────────
+  // ── Round 19 ─────────────────────────────────────────────────────────────
   {
-    round: 18,
+    round: 19,
     race_name: "Mexico City Grand Prix",
     circuit: "Autodromo Hermanos Rodriguez",
     country: "Mexico",
@@ -330,9 +333,9 @@ export const CALENDAR_2026: CalendarRace[] = [
     qualifying_deadline: "2026-10-31T21:00:00Z", // Sat 31 Oct 16:00 CDT — predictions lock
     race_start:          "2026-11-01T19:00:00Z", // Sun  1 Nov 14:00 CDT
   },
-  // ── Round 19 ─────────────────────────────────────────────────────────────
+  // ── Round 20 ─────────────────────────────────────────────────────────────
   {
-    round: 19,
+    round: 20,
     race_name: "São Paulo Grand Prix",
     circuit: "Autodromo Jose Carlos Pace",
     country: "Brazil",
@@ -342,11 +345,11 @@ export const CALENDAR_2026: CalendarRace[] = [
     qualifying_deadline: "2026-11-07T18:00:00Z", // Sat  7 Nov 12:00 CST — predictions lock
     race_start:          "2026-11-08T17:00:00Z", // Sun  8 Nov 11:00 CST
   },
-  // ── Round 20 ─────────────────────────────────────────────────────────────
+  // ── Round 21 ─────────────────────────────────────────────────────────────
   // Las Vegas FP/qualifying shown in PST (local night-race times, UTC-8)
   // PST+8h = CST+6h so these are already correct — no adjustment needed.
   {
-    round: 20,
+    round: 21,
     race_name: "Las Vegas Grand Prix",
     circuit: "Las Vegas Strip Circuit",
     country: "United States",
@@ -356,9 +359,9 @@ export const CALENDAR_2026: CalendarRace[] = [
     qualifying_deadline: "2026-11-21T06:00:00Z", // Fri 20 Nov 22:00 PST / Sat 00:00 CST — predictions lock
     race_start:          "2026-11-22T03:00:00Z", // Sat 21 Nov 21:00 CST
   },
-  // ── Round 21 ─────────────────────────────────────────────────────────────
+  // ── Round 22 ─────────────────────────────────────────────────────────────
   {
-    round: 21,
+    round: 22,
     race_name: "Qatar Grand Prix",
     circuit: "Lusail International Circuit",
     country: "Qatar",
@@ -368,9 +371,9 @@ export const CALENDAR_2026: CalendarRace[] = [
     qualifying_deadline: "2026-11-28T18:00:00Z", // Sat 28 Nov 12:00 CST — predictions lock
     race_start:          "2026-11-29T16:00:00Z", // Sun 29 Nov 10:00 CST
   },
-  // ── Round 22 ─────────────────────────────────────────────────────────────
+  // ── Round 23 ─────────────────────────────────────────────────────────────
   {
-    round: 22,
+    round: 23,
     race_name: "Abu Dhabi Grand Prix",
     circuit: "Yas Marina Circuit",
     country: "UAE",
